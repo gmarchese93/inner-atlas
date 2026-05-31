@@ -28,6 +28,23 @@ const INTENTIONS = [
   { id: 'empty_thoughts',   label: 'Empty' },
 ];
 
+const SESSION_STATE = {
+  IDLE: 'idle',
+  STARTING: 'starting',
+  PLAYING: 'playing',
+  PAUSING: 'pausing',
+  PAUSED: 'paused',
+  RESUMING: 'resuming',
+  DISPOSING: 'disposing',
+};
+
+const TRANSITION_STATES = new Set([
+  SESSION_STATE.STARTING,
+  SESSION_STATE.PAUSING,
+  SESSION_STATE.RESUMING,
+  SESSION_STATE.DISPOSING,
+]);
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function formatTime(s) {
@@ -64,6 +81,10 @@ function calcElapsed(accumulated, startedAt, isRunning) {
   return accumulated;
 }
 
+function isTransitionState(state) {
+  return TRANSITION_STATES.has(state);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Session() {
@@ -74,7 +95,7 @@ export default function Session() {
   const mode     = MODES.find(m => m.id === modeId) || MODES[0];
   const mood     = MOODS.find(m => m.id === moodId) || MOODS[0];
 
-  const [sessionState,   setSessionState]   = useState('idle');
+  const [sessionState,   setSessionState]   = useState(SESSION_STATE.IDLE);
   const [accumulated,    setAccumulated]    = useState(0);
   const [startedAt,      setStartedAt]      = useState(null);
   const [displaySecs,    setDisplaySecs]    = useState(0);
@@ -89,6 +110,7 @@ export default function Session() {
   const [audioError,     setAudioError]     = useState(null);
 
   const tickRef = useRef(null);
+  const transitionLockRef = useRef(false);
 
   // ── Restore draft ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -107,7 +129,7 @@ export default function Session() {
 
   // ── Tick ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (sessionState === 'active') {
+    if (sessionState === SESSION_STATE.PLAYING) {
       tickRef.current = setInterval(
         () => setDisplaySecs(calcElapsed(accumulated, startedAt, true)), 1000
       );
@@ -123,9 +145,9 @@ export default function Session() {
     journalText:        journal,
     intention,
     audioMix:           mix,
-    accumulatedSeconds: calcElapsed(accumulated, startedAt, sessionState === 'active'),
-    startedAt:          sessionState === 'active' ? startedAt : null,
-    isTimerRunning:     sessionState === 'active',
+    accumulatedSeconds: calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING),
+    startedAt:          sessionState === SESSION_STATE.PLAYING ? startedAt : null,
+    isTimerRunning:     sessionState === SESSION_STATE.PLAYING,
   }), [modeId, moodId, createdAt, journal, intention, mix, accumulated, startedAt, sessionState]);
 
   useEffect(() => { saveActiveDraft(buildDraft()); }, [buildDraft]);
@@ -145,14 +167,28 @@ export default function Session() {
 
   // ── Sync mix + nudge ───────────────────────────────────────────────────
   useEffect(() => {
-    if (sessionState === 'active') {
+    if (sessionState === SESSION_STATE.PLAYING) {
       audioEngine.applyMix(applyNudge(mix, intention));
     }
   }, [mix, intention, sessionState]);
 
+  function beginTransition() {
+    if (transitionLockRef.current || isTransitionState(sessionState)) return false;
+    transitionLockRef.current = true;
+    return true;
+  }
+
+  function finishTransition() {
+    transitionLockRef.current = false;
+  }
+
   // ── Primary control ────────────────────────────────────────────────────
   async function handlePrimary() {
-    if (sessionState === 'idle') {
+    if (!beginTransition()) return;
+
+    try {
+    if (sessionState === SESSION_STATE.IDLE) {
+      setSessionState(SESSION_STATE.STARTING);
       try {
         await audioEngine.play(applyNudge(mix, intention));
         setAudioError(null);
@@ -160,13 +196,15 @@ export default function Session() {
         setAudioError('Audio unavailable — session continues silently.');
       }
       setStartedAt(Date.now());
-      setSessionState('active');
-    } else if (sessionState === 'active') {
+      setSessionState(SESSION_STATE.PLAYING);
+    } else if (sessionState === SESSION_STATE.PLAYING) {
       const elapsed = calcElapsed(accumulated, startedAt, true);
       setAccumulated(elapsed); setStartedAt(null); setDisplaySecs(elapsed);
-      setSessionState('paused');
-      audioEngine.pause().catch(() => {});
-    } else if (sessionState === 'paused') {
+      setSessionState(SESSION_STATE.PAUSING);
+      await audioEngine.pause().catch(() => {});
+      setSessionState(SESSION_STATE.PAUSED);
+    } else if (sessionState === SESSION_STATE.PAUSED) {
+      setSessionState(SESSION_STATE.RESUMING);
       try {
         await audioEngine.resume();
         setAudioError(null);
@@ -174,14 +212,19 @@ export default function Session() {
         setAudioError('Audio unavailable — continuing silently.');
       }
       setStartedAt(Date.now());
-      setSessionState('active');
+      setSessionState(SESSION_STATE.PLAYING);
+    }
+    } finally {
+      finishTransition();
     }
   }
 
   // ── End & Save ─────────────────────────────────────────────────────────
   async function handleEndSave() {
-    const finalSecs = calcElapsed(accumulated, startedAt, sessionState === 'active');
-    setSessionState('paused');
+    if (!beginTransition()) return;
+
+    const finalSecs = calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING);
+    setSessionState(SESSION_STATE.DISPOSING);
     saveSession({
       id:              `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       mode:            modeId, mood: moodId,
@@ -198,6 +241,9 @@ export default function Session() {
 
   // ── Discard ────────────────────────────────────────────────────────────
   function handleDiscard() {
+    if (!beginTransition()) return;
+
+    setSessionState(SESSION_STATE.DISPOSING);
     clearActiveDraft();
     audioEngine.pause().catch(() => {});
     setTimeout(() => navigate('/'), 300);
@@ -219,8 +265,15 @@ export default function Session() {
     return () => window.removeEventListener('keydown', h);
   }, [roomMode]);
 
-  const isActive = sessionState === 'active';
-  const isStarted = sessionState !== 'idle';
+  const isTransitioning = TRANSITION_STATES.has(sessionState);
+  const isActive = sessionState === SESSION_STATE.PLAYING;
+  const isStarted = sessionState !== SESSION_STATE.IDLE;
+  const primaryLabel =
+    sessionState === SESSION_STATE.IDLE || sessionState === SESSION_STATE.STARTING
+      ? 'Begin Session'
+      : sessionState === SESSION_STATE.PLAYING || sessionState === SESSION_STATE.PAUSING
+        ? 'Pause'
+        : 'Resume';
 
   // ── Room Mode ──────────────────────────────────────────────────────────
   if (roomMode) {
@@ -323,6 +376,8 @@ export default function Session() {
         <div className="flex flex-col items-center gap-3 card-appear" style={{ animationDelay: '80ms' }}>
           <button
             onClick={handlePrimary}
+            disabled={isTransitioning}
+            aria-busy={isTransitioning}
             className="px-8 py-2.5 rounded-full transition-all duration-500 font-body text-sm tracking-[0.18em] uppercase"
             style={{
               background:   isActive ? `${mode.accentColor}16` : 'rgba(255,255,255,0.04)',
@@ -332,7 +387,7 @@ export default function Session() {
               boxShadow:    isActive ? `0 0 20px ${mode.accentColor}14, inset 0 1px 0 ${mode.accentColor}20` : 'inset 0 1px 0 rgba(255,255,255,0.07)',
             }}
           >
-            {sessionState === 'idle' ? 'Begin Session' : sessionState === 'active' ? 'Pause' : 'Resume'}
+            {primaryLabel}
           </button>
 
           {/* Enter Room — shown once session has started */}

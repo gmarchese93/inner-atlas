@@ -5,7 +5,17 @@
 
 // ── State ─────────────────────────────────────────────────────────────────
 
-const STATE = { IDLE: 'idle', PLAYING: 'playing', PAUSED: 'paused' };
+const STATE = {
+  IDLE: 'idle',
+  STARTING: 'starting',
+  PLAYING: 'playing',
+  PAUSING: 'pausing',
+  PAUSED: 'paused',
+  RESUMING: 'resuming',
+  DISPOSING: 'disposing',
+};
+
+const AUDIBLE_STATES = new Set([STATE.STARTING, STATE.PLAYING, STATE.RESUMING]);
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -37,6 +47,10 @@ const REVERB_SEND = {
 
 function curve(v) {
   return Math.pow(Math.max(0, Math.min(1, v)), 1.65);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ── Noise buffers ─────────────────────────────────────────────────────────
@@ -136,6 +150,7 @@ class AudioEngine {
     this._crackTimer = null;
     this._lfoNodes   = [];
     this._srcNodes   = [];
+    this._transition = null;
   }
 
   // ── Init ────────────────────────────────────────────────────────────────
@@ -396,14 +411,14 @@ class AudioEngine {
 
   _scheduleDroplets(intensity) {
     clearTimeout(this._dropTimer);
-    if (intensity < 0.02 || !this._rainSubs || this.state !== STATE.PLAYING) return;
+    if (intensity < 0.02 || !this._rainSubs || !AUDIBLE_STATES.has(this.state)) return;
     const ctx      = this.ctx;
     const subDrop  = this._rainSubs.droplet;
     const rateHz   = 0.3 + intensity * 5.5;
     const baseGain = Math.min(0.40, intensity * 0.75);
 
     const fire = () => {
-      if (!this.ctx || this.ctx.state !== 'running' || this.state !== STATE.PLAYING) return;
+      if (!this.ctx || this.ctx.state !== 'running' || !AUDIBLE_STATES.has(this.state)) return;
       if ((this._userValues['rain'] || 0) < 0.02) return;
 
       const now = ctx.currentTime;
@@ -533,52 +548,77 @@ class AudioEngine {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  async play(mix) {
-    await this._ensureContext();
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
-    if (Object.keys(this.finalGains).length === 0) this._buildGraph();
-    if (mix) this._applyMixImmediate(mix);
+  async _runTransition(task) {
+    if (this._transition) return false;
+    this._transition = task();
+    try {
+      await this._transition;
+      return true;
+    } finally {
+      this._transition = null;
+    }
+  }
 
+  async _fadeMasterTo(target, duration) {
     const now = this.ctx.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
     this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
-    this.masterGain.gain.linearRampToValueAtTime(MASTER_TARGET, now + FADE_IN);
-    this.state = STATE.PLAYING;
+    this.masterGain.gain.linearRampToValueAtTime(target, now + duration);
+    await wait(duration * 1000 + 120);
+  }
 
-    const rainV = this._userValues['rain'] || 0;
-    if (rainV > 0.02) this._setRainSublayers(curve(rainV));
+  async play(mix) {
+    if (this.state === STATE.PLAYING) return true;
+    return this._runTransition(async () => {
+      this.state = STATE.STARTING;
+      try {
+        await this._ensureContext();
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
+        if (Object.keys(this.finalGains).length === 0) this._buildGraph();
+        if (mix) this._applyMixImmediate(mix);
+
+        await this._fadeMasterTo(MASTER_TARGET, FADE_IN);
+        this.state = STATE.PLAYING;
+
+        const rainV = this._userValues['rain'] || 0;
+        if (rainV > 0.02) this._setRainSublayers(curve(rainV));
+      } catch (error) {
+        this.state = STATE.IDLE;
+        throw error;
+      }
+    });
   }
 
   async pause() {
-    if (this.state !== STATE.PLAYING || !this.ctx) return;
-    this.state = STATE.PAUSED;
-    clearTimeout(this._dropTimer);
-    clearTimeout(this._crackTimer);
+    if (this.state !== STATE.PLAYING || !this.ctx) return false;
+    return this._runTransition(async () => {
+      this.state = STATE.PAUSING;
+      clearTimeout(this._dropTimer);
+      clearTimeout(this._crackTimer);
 
-    const now = this.ctx.currentTime;
-    this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
-    this.masterGain.gain.linearRampToValueAtTime(0, now + FADE_OUT);
-    await new Promise(r => setTimeout(r, FADE_OUT * 1000 + 120));
-    if (this.ctx?.state === 'running') await this.ctx.suspend();
+      await this._fadeMasterTo(0, FADE_OUT);
+      if (this.ctx?.state === 'running') await this.ctx.suspend();
+      this.state = STATE.PAUSED;
+    });
   }
 
   async resume() {
-    if (this.state !== STATE.PAUSED || !this.ctx) return;
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    if (this.state !== STATE.PAUSED || !this.ctx) return false;
+    return this._runTransition(async () => {
+      this.state = STATE.RESUMING;
+      if (this.ctx.state === 'suspended') await this.ctx.resume();
 
-    const now = this.ctx.currentTime;
-    this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setValueAtTime(0, now);
-    this.masterGain.gain.linearRampToValueAtTime(MASTER_TARGET, now + FADE_IN);
-    this.state = STATE.PLAYING;
+      await this._fadeMasterTo(MASTER_TARGET, FADE_IN);
+      this.state = STATE.PLAYING;
 
-    const rainV = this._userValues['rain'] || 0;
-    if (rainV > 0.02) this._setRainSublayers(curve(rainV));
-    this._scheduleCrackle();
+      const rainV = this._userValues['rain'] || 0;
+      if (rainV > 0.02) this._setRainSublayers(curve(rainV));
+      this._scheduleCrackle();
+    });
   }
 
   dispose() {
+    this.state = STATE.DISPOSING;
     clearTimeout(this._dropTimer);
     clearTimeout(this._crackTimer);
     this._lfoNodes.forEach(o => { try { o.stop(); o.disconnect(); } catch {} });
@@ -619,6 +659,7 @@ class AudioEngine {
   get isPlaying() { return this.state === STATE.PLAYING; }
   get isPaused()  { return this.state === STATE.PAUSED; }
   get isIdle()    { return this.state === STATE.IDLE; }
+  get isTransitioning() { return Boolean(this._transition); }
 }
 
 const audioEngine = new AudioEngine();
