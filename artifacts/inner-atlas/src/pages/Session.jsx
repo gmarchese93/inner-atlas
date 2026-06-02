@@ -223,30 +223,38 @@ export default function Session() {
   async function handleEndSave() {
     if (!beginTransition()) return;
 
-    const finalSecs = calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING);
-    setSessionState(SESSION_STATE.DISPOSING);
-    saveSession({
-      id:              `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      mode:            modeId, mood: moodId,
-      durationSeconds: finalSecs,
-      journalText:     journal.trim(),
-      audioMix:        { ...mix },
-      intention:       intention || null,
-      createdAt,
-    });
-    clearActiveDraft();
-    audioEngine.pause().catch(() => {});
-    setTimeout(() => navigate('/history'), 350);
+    try {
+      const finalSecs = calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING);
+      setSessionState(SESSION_STATE.DISPOSING);
+      saveSession({
+        id:              `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        mode:            modeId, mood: moodId,
+        durationSeconds: finalSecs,
+        journalText:     journal.trim(),
+        audioMix:        { ...mix },
+        intention:       intention || null,
+        createdAt,
+      });
+      clearActiveDraft();
+      await audioEngine.pause().catch(() => {});
+      navigate('/history');
+    } finally {
+      finishTransition();
+    }
   }
 
   // ── Discard ────────────────────────────────────────────────────────────
-  function handleDiscard() {
+  async function handleDiscard() {
     if (!beginTransition()) return;
 
-    setSessionState(SESSION_STATE.DISPOSING);
-    clearActiveDraft();
-    audioEngine.pause().catch(() => {});
-    setTimeout(() => navigate('/'), 300);
+    try {
+      setSessionState(SESSION_STATE.DISPOSING);
+      clearActiveDraft();
+      await audioEngine.pause().catch(() => {});
+      navigate('/');
+    } finally {
+      finishTransition();
+    }
   }
 
   // ── Room mode ──────────────────────────────────────────────────────────
