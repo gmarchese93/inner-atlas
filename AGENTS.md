@@ -33,6 +33,8 @@ Relevant local tools/skills may include:
 - ECC
 - Oxc / Oxlint / Oxfmt
 - SkillOpt
+- Spec Kit / Specify CLI
+- Open Design
 - book-to-skill
 - awesome-design-md reference library
 - agency-agents / Codex custom agents
@@ -41,9 +43,53 @@ Use these only when relevant to the task. Do not force them into every request.
 
 If a requested tool or skill is not visible, search the local machine before declaring it unavailable. If it still cannot be found, report that clearly.
 
+Current Headroom caveat: Headroom has been evaluated for context/log compression but is not currently installed as a usable Windows CLI. `headroom --help` must succeed before routing work through it. Native `uv tool install` attempts are blocked on this machine because Headroom's Rust/Python build produces generated Cargo executables that Windows refuses to run with Access Denied, even after Visual Studio Build Tools installation. Do not use `headroom learn` or let Headroom write to `AGENTS.md` unless explicitly approved.
+
+## AI Engineering From Scratch Routing
+
+AI Engineering from Scratch is an optional learning and agent-engineering reference, not an Inner Atlas implementation workflow.
+
+Installed skills:
+
+- `find-your-level`
+- `check-understanding`
+
+Use these only when the task explicitly involves:
+
+- assessing the user's AI/ML learning level
+- quizzing or reviewing AI Engineering from Scratch phases
+- learning-path planning for AI, ML, LLMs, tools, MCP, agent engineering, or multi-agent systems
+- using the curriculum as background education before future AI/agent milestones
+
+Do not use these skills for:
+
+- ordinary Inner Atlas R.0.X implementation
+- audio engine work
+- Web Audio bugs
+- localStorage/session logic
+- UI visual refactors
+- build/lint/typecheck work
+- routine code review
+- GitHub merge work
+
+Current caveat: the skills.sh install for `rohitg00/ai-engineering-from-scratch` exposes and installs only the two skills above. It does not install the full lesson artifact set advertised by the README. The installed skill text still refers to a 260+ lesson curriculum, while the current README advertises 503 lessons; treat the skills as lightweight routing/quiz helpers, not a complete local mirror of the current curriculum.
+
 ## Meta-Skill Router
 
 SkillOpt is a local/global tool for improving skill documents, not for implementing app features.
+
+It is installed globally through `uv tool install skillopt` as SkillOpt v0.1.0.
+
+Installed executable shims:
+
+- `skillopt-train`
+- `skillopt-eval`
+
+Current Windows caveat: the uv-generated `.exe` shims return Access Denied on this machine. Use the underlying venv Python entrypoints instead:
+
+`C:\Users\gmarchese\AppData\Roaming\uv\tools\skillopt\Scripts\python.exe -m scripts.train --help`
+
+`C:\Users\gmarchese\AppData\Roaming\uv\tools\skillopt\Scripts\python.exe -m scripts.eval_only --help`
 
 Use SkillOpt only when optimizing:
 
@@ -74,6 +120,235 @@ Optimized output such as `best_skill.md` must be reviewed manually before replac
 Do not store secrets, transient logs, command noise, or private content in SkillOpt datasets.
 
 Keep SkillOpt data outside the app repo unless explicitly approved.
+
+## R.0.X SkillOpt Readiness Automation
+
+At the end of every R.0.X milestone, run the SkillOpt readiness check automatically before final Claude review, merge, or branch closeout.
+
+Use:
+
+`tools/skillopt-readiness/r0x-skillopt-check.md`
+
+Create the report with:
+
+`powershell -ExecutionPolicy Bypass -File tools/skillopt-readiness/new-readiness-report.ps1 -Milestone r0.x`
+
+Then fill:
+
+- `docs/retrospectives/<milestone>-skillopt-readiness.md`
+
+The readiness check must inspect:
+
+- branch diff and changed files
+- local Codex review notes
+- Claude review findings, if available
+- user corrections during the milestone
+- verification gaps
+- skill/tool routing mistakes
+- repeated scope or completion-claim issues
+- unclear `AGENTS.md` or `SKILL.md` instructions
+
+SkillOpt readiness output must decide:
+
+- SkillOpt recommended: yes/no/defer
+- trigger category
+- evidence
+- candidate benchmark prompts
+- scoring criteria
+- target instruction file
+- whether running SkillOpt requires approval
+
+Do not run SkillOpt training automatically. Do not send data to SkillOpt automatically. Do not let SkillOpt replace `AGENTS.md` or any `SKILL.md` automatically.
+
+If SkillOpt is recommended, prepare the benchmark pack outside app source under:
+
+`C:\Users\gmarchese\SkillOpt\inner-atlas\<milestone>\`
+
+Then stop and ask for explicit approval before running:
+
+`C:\Users\gmarchese\AppData\Roaming\uv\tools\skillopt\Scripts\python.exe -m scripts.train ...`
+
+The R.0.X milestone is not closeout-ready until the readiness report exists or the user explicitly waives it.
+
+## Claude Web Architecture Handoff
+
+Claude Web / Sonnet is a human-mediated architecture and diff-review surface. Codex cannot call it directly.
+
+For non-trivial R.0.X milestones, create or reuse:
+
+`docs/milestones/<milestone>-claude-architecture-handoff.md`
+
+Use:
+
+`powershell -ExecutionPolicy Bypass -File tools/claude-handoff/new-claude-handoff.ps1 -Milestone r0.x`
+
+The template is:
+
+`docs/milestones/templates/claude-architecture-handoff.md`
+
+Create the handoff before implementation when any of these applies:
+
+- a new non-trivial R.0.X milestone starts
+- architecture, state flow, persistence, audio, routing, or data contracts change
+- a new runtime dependency is proposed
+- a cross-system or high-risk refactor is planned
+- the user asks for Claude architecture confirmation
+
+Codex must fill the repository-evidence and pre-plan sections, tell the user the handoff is ready, and stop for the human-mediated Claude response unless the user explicitly waives the checkpoint.
+
+After the user returns Claude's response, Codex must classify each recommendation as:
+
+- valid and fix now
+- valid but defer
+- false positive
+- requires human decision
+
+Record the classification and final human decisions in the same handoff artifact before implementation continues.
+
+For final Claude diff review, update the same artifact with changed files, verification evidence, manual QA status, remaining risks, and the review prompt.
+
+Small fixes and docs-only changes may use an abbreviated handoff or an explicit waiver. Do not create duplicate handoff documents for the same milestone.
+
+## Spec Kit / Specify CLI Routing
+
+Spec Kit is an optional spec-driven development toolkit installed globally as `specify-cli`.
+
+Use Spec Kit only when a task benefits from explicit spec-driven artifacts, such as:
+
+- large R.0.X or beta-readiness milestones
+- ambiguous feature discovery that needs requirements clarification
+- turning product intent into a durable spec, technical plan, and task list
+- cross-agent handoff between GPT, Claude, Codex, and GitHub review
+- architecture-heavy work where consistency across spec, plan, tasks, and implementation matters
+- milestone planning that should become repeatable project process
+
+Do not use Spec Kit for:
+
+- ordinary small bugfixes
+- R0.3-style implementation-only refactors
+- audio engine internals unless the milestone explicitly asks for a new architecture/spec workflow
+- Web Audio bug diagnosis
+- localStorage/session logic fixes
+- small CSS or TypeScript edits
+- normal build/lint/typecheck work
+- routine code review
+- merge work
+
+Spec Kit is not an Inner Atlas runtime dependency. Do not add it to package.json or lockfiles.
+
+The global CLI is installed as `specify`, but on this Windows profile the uv shim may be blocked by Access Denied. If that happens, invoke the installed entry point with:
+
+`C:\Users\gmarchese\AppData\Roaming\uv\tools\specify-cli\Scripts\python.exe -c "import sys, specify_cli; sys.argv=['specify','--help']; specify_cli.main()"`
+
+Do not run `specify init --here`, `specify init .`, or any command that creates `.specify/`, agent command files, or agent skills inside Inner Atlas unless the user explicitly approves that project-local initialization.
+
+If project-local initialization is approved, prefer Codex skills mode:
+
+`specify init --here --integration codex --integration-options="--skills"`
+
+Before using Spec Kit, state:
+
+- why Spec Kit is needed instead of the existing GPT scope / Claude architecture / Codex implementation pipeline
+- whether the operation is read-only CLI inspection, project initialization, spec creation, planning, task generation, analysis, or implementation
+- expected files or directories it may create or modify
+- whether outputs are throwaway planning artifacts or production-facing project process
+
+After using Spec Kit, report:
+
+- command used
+- files created or changed
+- whether `.specify/` or agent skills/commands were added
+- how the resulting spec/plan/tasks map to the Inner Atlas roadmap
+- what should be sent to Claude for architecture or diff-risk review
+
+## Open Design Routing
+
+Open Design is an optional local-first design/prototype/artifact system for agent-native design workflows.
+
+It is installed as the Windows desktop app at:
+
+`C:\Users\gmarchese\AppData\Local\Programs\Open Design\Open Design.exe`
+
+Bundled reference assets are available under:
+
+`C:\Users\gmarchese\AppData\Local\Programs\Open Design\resources\open-design\`
+
+Open Design may provide:
+
+- DESIGN.md design systems
+- agent skills
+- plugins
+- prototype generation
+- artifact previews
+- MCP access through the configured Codex `open-design` MCP server
+- Codex/Cursor/Claude-compatible design-source workflows
+- HTML/PDF/PPTX/MP4 export
+- HyperFrames motion workflows
+- design-system-driven artifact generation
+
+Open Design is not part of the normal Inner Atlas R.0.X implementation workflow.
+
+Use Open Design only when the task explicitly involves:
+
+- design-system exploration
+- creating or refining Inner Atlas DESIGN.md
+- visual-system work
+- UI prototype generation
+- landing page or waitlist page prototyping
+- dashboard/live artifact prototyping
+- deck/presentation artifact generation
+- image/video/motion artifact exploration
+- HyperFrames motion graphics
+- DESIGN.md-driven implementation research
+- comparing design systems
+- generating throwaway prototypes for review before production implementation
+
+Do not use Open Design for:
+
+- ordinary Inner Atlas R.0.X implementation
+- audio engine work
+- Web Audio bugs
+- localStorage/session logic
+- small CSS edits
+- small TypeScript edits
+- normal build/lint work
+- database/backend logic
+- GitHub merge work
+- routine code review
+- production implementation unless explicitly approved
+
+Open Design is not an Inner Atlas runtime dependency. Do not add it to package.json or lockfiles.
+
+Do not copy generated artifacts, DESIGN.md files, plugins, HTML, or prototype outputs into Inner Atlas production code without explicit approval.
+
+Current install caveat: the desktop app is installed, and Codex has an `open-design` MCP server configured with the packaged Node CLI entrypoint. The Open Design `od` command is still not on PATH; Git Bash `od` is GNU octal-dump, not Open Design. Use the configured MCP server or the packaged CLI directly:
+
+`C:\Program Files\nodejs\node.exe "C:\Users\gmarchese\AppData\Local\Programs\Open Design\resources\app\prebundled\daemon\daemon-cli.mjs" ...`
+
+The MCP server proxies to a running Open Design daemon at `http://127.0.0.1:7456`. Start the Open Design desktop app or daemon before expecting MCP tool calls to return live projects/artifacts. If the current Codex session does not expose Open Design tools yet, restart Codex so it reloads MCP config.
+
+Figma Make remains useful for exploratory UI/UX design and visual ideation. Open Design is useful for agent-native artifact generation, DESIGN.md-driven prototypes, and Codex-accessible design-system references. Codex remains responsible for production implementation in the Inner Atlas repo, and Claude remains responsible for architecture/product review and final diff risk analysis.
+
+The Inner Atlas visual direction in this file remains authoritative. Open Design output is reference material until reviewed and explicitly accepted.
+
+Before using Open Design, state:
+
+- why Open Design is needed
+- why Figma/Codex alone is insufficient
+- selected Open Design mode, skill, plugin, or design system if known
+- whether output is throwaway prototype, design reference, or production candidate
+- expected files or artifacts
+- whether generated output will remain outside the repo
+
+After using Open Design, report:
+
+- command/tool used
+- artifact or design system used
+- files/artifacts generated
+- whether anything was copied into Inner Atlas
+- visual/UX findings
+- production implementation recommendations
+- what should be discarded, kept as reference, or passed to Claude/Codex
 
 ## Book-To-Skill / Codex Knowledge Skill Generation Routing
 
@@ -116,6 +391,24 @@ Do not convert any book or document unless the user explicitly approves that spe
 It provides specialist role agents installed globally under:
 
 `~/.codex/agents/`
+
+Source checkout:
+
+`C:\Users\gmarchese\reference\agency-agents`
+
+Installed from upstream revision `f541d07` for these divisions:
+
+- Engineering
+- Design
+- Product
+- Project Management
+- Testing
+- Security
+- Support
+- Specialized
+- Academic
+
+These nine divisions currently provide 126 Codex custom-agent TOML files. Codex auto-discovers standalone agents under `~/.codex/agents/`; restart Codex after installing or updating them.
 
 Use agency-agents only when a task benefits from explicit specialist perspective, role-based critique, cross-functional review, or domain-specific planning.
 
@@ -206,8 +499,6 @@ Use `DevOps Automator` for CI/CD, deployment automation, monitoring, environment
 Use `Rapid Prototyper` for fast proof-of-concepts, MVP experiments, throwaway spikes, feature feasibility tests, and rapid UI/interaction exploration.
 
 Use `Senior Developer` for complex implementation planning, architectural tradeoffs, advanced patterns, risky refactors, and code-quality arbitration.
-
-Use `Security Engineer` for threat modeling, secure code review, security architecture, vulnerability assessment, security CI/CD, pre-beta security gates, and auth/database/privacy work.
 
 Use `Autonomous Optimization Architect` for LLM routing, cost optimization, shadow testing, intelligent API selection, autonomous agent cost guardrails, and model-routing experiments.
 
@@ -305,6 +596,28 @@ Use `Workflow Optimizer` for process analysis, workflow improvement, automation 
 
 Use `Accessibility Auditor` for WCAG auditing, assistive technology testing, screen reader behavior, keyboard navigation, contrast, focus states, and inclusive UI verification.
 
+## Security Division Routing
+
+Use `Security Architect` for threat modeling, trust boundaries, secure-by-design architecture, defense in depth, and security requirements before implementation.
+
+Use `Application Security Engineer` for secure code review, SAST/DAST, dependency and secret scanning, secure SDLC, vulnerability remediation, and security regression tests.
+
+Use `Senior SecOps Engineer` for defensive code-level security gates, secrets scanning, secure defaults, and pre-release security verification.
+
+Use `Cloud Security Architect` only when cloud infrastructure, IAM, zero trust, network boundaries, or cloud-native deployment security is in scope.
+
+Use `Penetration Tester` only for explicitly authorized security testing with a defined target and scope. Never use it for unapproved exploitation.
+
+Use `Incident Responder` only for active or simulated breach investigation, containment, forensics, and recovery.
+
+Use `Threat Intelligence Analyst` for adversary, campaign, ATT&CK, and threat-landscape research relevant to a defined risk.
+
+Use `Threat Detection Engineer` for SIEM rules, detection logic, threat hunting, telemetry requirements, and ATT&CK coverage.
+
+Use `Compliance Auditor` for SOC 2, ISO 27001, HIPAA, PCI-DSS, privacy controls, and formal compliance evidence.
+
+Use `Blockchain Security Auditor` only for smart-contract or blockchain security work.
+
 ## Specialized Division Routing
 
 Use `Agents Orchestrator` only for complex projects requiring multiple agency agents or cross-functional role coordination. Do not use it for ordinary single-task work.
@@ -314,10 +627,6 @@ Use `LSP/Index Engineer` for language server protocol, code intelligence, semant
 Use `Agentic Identity & Trust Architect` for multi-agent identity, agent authorization, audit trails, trust verification, and secure agentic system design.
 
 Use `Identity Graph Operator` for shared identity resolution, entity deduplication, merge proposals, and cross-agent identity consistency.
-
-Use `Blockchain Security Auditor` only for blockchain/smart-contract security work.
-
-Use `Compliance Auditor` for SOC 2, ISO 27001, HIPAA, PCI-DSS, privacy/compliance readiness, and formal control review.
 
 Use `Cultural Intelligence Strategist` for global UX, cultural exclusion, representation, localization sensitivity, and cross-cultural product resonance.
 
@@ -340,6 +649,34 @@ Use `Personal Growth Mentor` only when the task is explicitly personal developme
 Use `Workflow Architect` for mapping every path through a system before code is written, workflow discovery, routing maps, and process specification.
 
 Use `Business Strategist`, `Change Management Consultant`, `Chief of Staff`, `Customer Success Manager`, and `Pricing Analyst` only for public launch, business strategy, GTM, stakeholder planning, adoption, pricing, or customer lifecycle work.
+
+## Support Division Routing
+
+Use `Support Responder` for customer-support workflows, issue resolution, escalation design, and support experience.
+
+Use `Analytics Reporter` for KPI summaries, dashboards, business intelligence, and evidence-based reporting.
+
+Use `Infrastructure Maintainer` for system operations, monitoring, reliability maintenance, and infrastructure health.
+
+Use `Executive Summary Generator` for concise decision-oriented milestone, risk, or leadership summaries.
+
+Use `Finance Tracker` only for budgeting, cash-flow, or business-performance work.
+
+Use `Legal Compliance Checker` only for preliminary legal/regulatory risk identification; it does not replace qualified legal advice.
+
+## Academic Division Routing
+
+Use `Anthropologist` for culturally coherent societies, rituals, belief systems, kinship, and world-building analysis.
+
+Use `Geographer` for physical/human geography, climate, terrain, settlements, and cartographic coherence.
+
+Use `Historian` for historical analysis, period coherence, material culture, and evidence-based setting review.
+
+Use `Narratologist` for narrative structure, story theory, character arcs, and storytelling analysis.
+
+Use `Psychologist` for research-grounded motivation, personality, cognition, and psychologically credible characters.
+
+Academic agents are primarily for narrative, research, learning, and world-building work. Do not route ordinary Inner Atlas implementation through them.
 
 ## Inner Atlas Suggested Agency Agent Sets
 
@@ -374,7 +711,8 @@ For beta readiness:
 - Product Manager
 - Senior Developer
 - Software Architect
-- Security Engineer
+- Security Architect
+- Application Security Engineer
 - Accessibility Auditor
 - Evidence Collector
 - Reality Checker
@@ -383,7 +721,8 @@ For backend/auth/database future:
 
 - Backend Architect
 - Database Optimizer
-- Security Engineer
+- Security Architect
+- Application Security Engineer
 - Software Architect
 - SRE
 
@@ -392,7 +731,7 @@ For deployment/CI/CD future:
 - DevOps Automator
 - SRE
 - Git Workflow Master
-- Security Engineer
+- Senior SecOps Engineer
 - Evidence Collector
 
 For code review:
@@ -400,7 +739,7 @@ For code review:
 - Code Reviewer
 - Senior Developer
 - Minimal Change Engineer
-- Security Engineer, only when security-sensitive
+- Application Security Engineer, only when security-sensitive
 - Accessibility Auditor, only when UI changed
 
 For documentation:
@@ -498,6 +837,97 @@ For workflow:
 
 - use Superpowers skills for systematic debugging, TDD, code review handling, plan execution, and verification when relevant
 
+## Automated Testing Routing
+
+The repository uses:
+
+- Vitest for unit and integration tests
+- Testing Library and jsdom for React/DOM integration tests
+- `@vitest/coverage-v8` for coverage evidence
+- Playwright Test for Chromium, Firefox, and WebKit E2E tests
+
+For testable features, bug fixes, refactors, and behavior changes, use the Superpowers TDD workflow:
+
+1. Write a focused failing test.
+2. Run it and verify it fails for the expected reason.
+3. Implement the minimum change.
+4. Run the focused test and the affected suite.
+5. Refactor only while tests remain green.
+
+Exceptions such as generated code, throwaway prototypes, configuration-only changes, or work that cannot be tested first require an explicit user-approved waiver.
+
+Every R.0.X milestone must evaluate:
+
+- unit tests
+- integration tests
+- E2E/browser tests
+- coverage
+- manual browser QA
+- human visual QA when UI changes
+- human listening QA when audio changes
+
+Not every category must receive new tests in every milestone. Every category must be marked applicable or not applicable. If an applicable category is not run, report the reason, omission risk, approver, and whether it blocks merge.
+
+Portable commands:
+
+```bash
+pnpm test
+pnpm run test:unit
+pnpm run test:integration
+pnpm run test:coverage
+pnpm run test:e2e
+```
+
+On this Windows machine, the workspace intentionally excludes platform-native
+optional packages. Recreate the verified caches after `%TEMP%` cleanup or a
+dependency upgrade:
+
+```powershell
+$esbuildCache = Join-Path $env:TEMP "inner-atlas-esbuild-0.27.3"
+$nativeCache = Join-Path $env:TEMP "inner-atlas-native-win32"
+
+npm install --prefix $esbuildCache --ignore-scripts --no-audit --no-fund `
+  "@esbuild/win32-x64@0.27.3"
+
+npm install --prefix $nativeCache --ignore-scripts --no-audit --no-fund `
+  "lightningcss-win32-x64-msvc@1.32.0" `
+  "@tailwindcss/oxide-win32-x64-msvc@4.3.0" `
+  "@rollup/rollup-win32-x64-msvc@4.60.3"
+```
+
+Keep these versions aligned with `pnpm-lock.yaml` after upgrades. Prefix
+Vitest, Vite, Playwright web-server, and build commands with the verified
+esbuild binary:
+
+```powershell
+$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.27.3\node_modules\@esbuild\win32-x64\esbuild.exe"
+pnpm test
+```
+
+Use the same environment variable for `pnpm run test:coverage` and `pnpm run test:e2e`.
+
+The full workspace build and Playwright web server also require the verified
+Lightning CSS, Tailwind Oxide, and Rollup native cache through `NODE_PATH`:
+
+```powershell
+$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.27.3\node_modules\@esbuild\win32-x64\esbuild.exe"
+$env:NODE_PATH="$env:TEMP\inner-atlas-native-win32\node_modules"
+$env:PORT="5173"
+$env:BASE_PATH="/"
+pnpm run build
+pnpm run test:e2e
+```
+
+After installing or upgrading Playwright, install the free browser binaries with:
+
+```bash
+pnpm exec playwright install chromium firefox webkit
+```
+
+Coverage starts as an evidence baseline, not a blind global threshold. Prioritize changed files and critical modules: audio state, gain safety, storage normalization/migrations, active drafts, saved sessions, scene selection, and feature-flag fallbacks. Add thresholds only after the suite represents meaningful behavior.
+
+Playwright certifies browser behavior, not audible quality. Human listening remains mandatory for audio milestones.
+
 ## Task-Based Routing
 
 For feature planning:
@@ -534,12 +964,19 @@ For React/TypeScript changes:
 
 For browser behavior:
 
-- use `webapp-testing`, frontend testing, or Playwright-style verification when available and relevant
+- use the project Playwright suite plus `webapp-testing` or in-app browser verification when relevant
+- extend `tests/e2e/` when a changed critical user flow needs repeatable regression coverage
 
 For frontend design implementation:
 
 - first use `inner-atlas-visual-refactor` for Inner Atlas visual direction and routing
 - use `frontend-design` when building or refining web UI that needs stronger visual hierarchy, composition, responsive layout, or production-grade frontend craft
+- use `design-taste-frontend` when the task needs stronger anti-generic visual direction, layout variance, typography, spacing, or motion guidance beyond the baseline frontend router
+- use `gpt-taste` only for stricter Codex/GPT-oriented visual exploration, high-variance layouts, or GSAP-heavy direction; do not use it for quiet core-app maintenance unless explicitly useful
+- use `image-to-code` only when the user explicitly wants an image-first workflow: generate or inspect reference images, analyze them, then implement matching frontend code
+- use `redesign-existing-projects` when improving an existing screen or app surface after an audit, not for greenfield feature work
+- use `high-end-visual-design` or `minimalist-ui` only when that visual direction is explicitly chosen or strongly implied by the milestone
+- use `brandkit`, `imagegen-frontend-web`, or `imagegen-frontend-mobile` only for generated reference images, brand boards, comps, or mobile/web visual frames; do not treat their output as production code
 - use `emil-design-eng` for component polish, interaction detail, animation judgment, and invisible UI craft after the product direction is already clear
 - use `ui-ux-pro-max` only as an optional UI/UX reference lookup for design systems, layout/accessibility/palette checks, UX guideline searches, or chart/data-visualization guidance when those references directly support the task
 - do not use generic frontend design skills for audio engine logic, storage, state machines, or non-visual refactors
@@ -561,6 +998,14 @@ For landing pages:
 `awesome-design-md` is an optional design-reference library containing DESIGN.md files extracted from public websites.
 
 It is not a normal runtime dependency, not an app dependency, and not the source of truth for Inner Atlas.
+
+Installed reference checkout:
+
+`C:\Users\gmarchese\reference\awesome-design-md`
+
+Read candidate references from:
+
+`C:\Users\gmarchese\reference\awesome-design-md\design-md\<brand>\DESIGN.md`
 
 Use DESIGN.md references only when the task explicitly involves:
 
@@ -611,7 +1056,12 @@ Preferred workflow:
 Relevant skills to consider when DESIGN.md work is in scope:
 
 - `inner-atlas-visual-refactor`
+- Open Design, only for design-system references, throwaway prototypes, artifacts, or DESIGN.md exploration
 - `frontend-design`
+- `design-taste-frontend`
+- `high-end-visual-design`
+- `minimalist-ui`, only when the direction calls for restrained editorial UI
+- `brandkit` or `imagegen-frontend-web`, only for reference images or design boards
 - `design-critique`
 - `web-design-guidelines`
 - `emil-design-eng`
@@ -636,7 +1086,7 @@ For broad repo analysis:
 For large outputs/logs/test results:
 
 - summarize clearly
-- use Headroom when available for context compression, large tool outputs, long logs, broad file reads, or cross-agent context compression
+- use Headroom only when `headroom --help` verifies it is actually installed and available; if available, use it for context compression, large tool outputs, long logs, broad file reads, or cross-agent context compression
 - use context/log-management skills when available instead of dumping raw output
 - do not run `headroom learn` or allow Headroom to write corrections into AGENTS.md or project instructions unless the user explicitly asks for that action
 
@@ -804,6 +1254,8 @@ For each feature:
 
 - implement
 - lint
-- test
+- follow TDD when applicable
+- run applicable unit, integration, E2E, and coverage checks
+- complete manual browser QA and human audio/visual QA when relevant
 - summarize changes
 - identify technical debt
