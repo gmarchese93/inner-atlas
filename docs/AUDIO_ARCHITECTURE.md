@@ -2,11 +2,24 @@
 
 ## Scope
 
-This document captures the current Web Audio architecture after R0.2. It is intended to preserve the state-machine reasoning behind the Begin, Pause, Resume, End, and Discard race fix.
+This document captures the current Web Audio architecture after R0.4. It preserves the state-machine reasoning behind the Begin, Pause, Resume, End, and Discard race fix and records the R0.3 modular audio runtime plus the R0.4 Resonance event source.
 
 Runtime files:
 
-- `artifacts/inner-atlas/src/lib/audioEngine.js`
+- `artifacts/inner-atlas/src/lib/audioEngine.js` - compatibility re-export
+- `artifacts/inner-atlas/src/audio/audioEngine.js` - engine state machine and graph owner
+- `artifacts/inner-atlas/src/audio/audioStateMachine.js` - engine state enum and audible states
+- `artifacts/inner-atlas/src/audio/gain.js` - layer caps, fade constants, gain helpers
+- `artifacts/inner-atlas/src/audio/effects/darkReverb.js` - shared dark reverb bus
+- `artifacts/inner-atlas/src/audio/effects/stereoMotion.js` - panner/LFO helpers
+- `artifacts/inner-atlas/src/audio/layers/air.js`
+- `artifacts/inner-atlas/src/audio/layers/analog.js`
+- `artifacts/inner-atlas/src/audio/layers/drone.js`
+- `artifacts/inner-atlas/src/audio/layers/noise.js`
+- `artifacts/inner-atlas/src/audio/layers/pad.js`
+- `artifacts/inner-atlas/src/audio/layers/rain.js`
+- `artifacts/inner-atlas/src/audio/layers/resonance.js`
+- `artifacts/inner-atlas/src/lib/audioMix.js` - current mix normalization and legacy aliases
 - `artifacts/inner-atlas/src/pages/Session.jsx`
 - `artifacts/inner-atlas/src/components/AudioMixer.jsx`
 - `artifacts/inner-atlas/src/lib/constants.js`
@@ -134,7 +147,7 @@ Flow:
 1. If not `playing` or there is no context, return `false`.
 2. Enter `_runTransition`.
 3. Set engine state to `pausing`.
-4. Clear droplet and crackle timers.
+4. Clear the `_timers` registry (`drop` and `crack`).
 5. Fade master gain to `0`.
 6. Suspend the context if running.
 7. Set engine state to `paused`.
@@ -282,17 +295,23 @@ The fix adds:
 
 ## Sound Design Layers
 
-Current layers:
+Current continuous mixer layers:
 
 - `drone`: ritual low foundation
 - `pad`: wide harmonic atmosphere
 - `rain`: density-based rain and droplets
 - `analog`: subtle imperfection
-- `pulse`: slow body throb
 - `air`: high space and height
 
-Layer values are curved before gain application:
+Deprecated legacy layer:
 
+- `pulse`: removed from active graph, visible mixer, presets, defaults, nudges, and gain config in R0.4. Stored legacy `audioMix.pulse` values are read safely by mix normalization and discarded from the effective current mix.
+
+Event source:
+
+- `resonance`: a synthesized one-shot bowl/tuning-fork accent. It is not a slider layer, has no `finalGains` entry, and does not use a recurring scheduler. Each trigger creates temporary oscillator/gain nodes, sends a controlled amount to master/reverb, schedules oscillator stop, and disconnects when ended.
+
+Layer values are curved before gain application:
 ```js
 Math.pow(clamp(value, 0, 1), 1.65)
 ```
@@ -306,3 +325,4 @@ Each layer has a cap and smoothing time constant. A raw slider value of `0` is c
 - `handlePrimary` should eventually be extracted into a typed `useAudioSession` hook.
 - Discard now waits for full fade-out before navigation; this is correct for audio safety but may need a product decision on perceived responsiveness.
 - Browser automation can verify control flow, but audible output still needs human confirmation.
+- Manual Resonance strike UI and global mute remain deferred until human listening/product review asks for them.

@@ -13,8 +13,8 @@ import { buildAir } from './layers/air';
 import { buildAnalog, scheduleCrackle } from './layers/analog';
 import { buildDrone } from './layers/drone';
 import { buildPad } from './layers/pad';
-import { buildPulse } from './layers/pulse';
 import { buildRain, scheduleDroplets, setRainSublayers } from './layers/rain';
+import { buildResonance, triggerResonance } from './layers/resonance';
 
 class AudioEngine {
   constructor() {
@@ -27,8 +27,7 @@ class AudioEngine {
     this._rainSubs = null;
     this._dropletBuf = null;
     this._analogCrackleBuf = null;
-    this._dropTimer = null;
-    this._crackTimer = null;
+    this._timers = { drop: null, crack: null };
     this._lfoNodes = [];
     this._srcNodes = [];
     this._transition = null;
@@ -52,8 +51,9 @@ class AudioEngine {
     buildPad(this);
     buildRain(this);
     buildAnalog(this);
-    buildPulse(this);
+    this.finalGains.tape = this.finalGains.analog;
     buildAir(this);
+    buildResonance(this);
   }
 
   _trackLFO(osc) {
@@ -76,6 +76,13 @@ class AudioEngine {
 
   _scheduleCrackle() {
     return scheduleCrackle(this);
+  }
+
+  _clearTimers() {
+    Object.keys(this._timers).forEach(key => {
+      clearTimeout(this._timers[key]);
+      this._timers[key] = null;
+    });
   }
 
   async _runTransition(task) {
@@ -108,6 +115,7 @@ class AudioEngine {
         if (mix) this._applyMixImmediate(mix);
 
         await this._fadeMasterTo(MASTER_TARGET, FADE_IN);
+        triggerResonance(this);
         this.state = STATE.PLAYING;
 
         const rainV = this._userValues.rain || 0;
@@ -123,8 +131,7 @@ class AudioEngine {
     if (this.state !== STATE.PLAYING || !this.ctx) return false;
     return this._runTransition(async () => {
       this.state = STATE.PAUSING;
-      clearTimeout(this._dropTimer);
-      clearTimeout(this._crackTimer);
+      this._clearTimers();
 
       await this._fadeMasterTo(0, FADE_OUT);
       if (this.ctx?.state === 'running') await this.ctx.suspend();
@@ -149,8 +156,7 @@ class AudioEngine {
 
   dispose() {
     this.state = STATE.DISPOSING;
-    clearTimeout(this._dropTimer);
-    clearTimeout(this._crackTimer);
+    this._clearTimers();
     this._lfoNodes.forEach(o => {
       try {
         o.stop();
@@ -165,6 +171,8 @@ class AudioEngine {
     });
     this._lfoNodes = [];
     this._srcNodes = [];
+    this._dropletBuf = null;
+    this._analogCrackleBuf = null;
     if (this.ctx && this.ctx.state !== 'closed') this.ctx.close().catch(() => {});
     this.ctx = null;
     this.masterGain = null;
@@ -199,6 +207,10 @@ class AudioEngine {
       gain.gain.value = curve(val) * (LAYER_CAPS[layer] || 0.35);
       if (layer === 'rain') this._setRainSublayers(curve(val));
     });
+  }
+
+  triggerResonance() {
+    return triggerResonance(this);
   }
 
   get isPlaying() {

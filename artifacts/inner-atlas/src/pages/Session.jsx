@@ -5,6 +5,7 @@ import GradientBackground from '../components/GradientBackground';
 import MoodGlyph from '../components/MoodGlyph';
 import AudioMixer from '../components/AudioMixer';
 import audioEngine from '../lib/audioEngine';
+import { normalizeMix } from '../lib/audioMix';
 import { saveSession } from '../lib/sessionStorage';
 import { saveActiveDraft, loadActiveDraft, clearActiveDraft } from '../lib/activeSession';
 import {
@@ -45,25 +46,18 @@ const TRANSITION_STATES = new Set([
   SESSION_STATE.DISPOSING,
 ]);
 
+const TIMER_RUNNING_STATES = new Set([
+  SESSION_STATE.STARTING,
+  SESSION_STATE.PLAYING,
+  SESSION_STATE.RESUMING,
+]);
+
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function formatTime(s) {
   const m = Math.floor(s / 60).toString().padStart(2, '0');
   return `${m}:${(s % 60).toString().padStart(2, '0')}`;
-}
-
-function normalizeMix(raw, moodId) {
-  const base = { ...(MOOD_PRESETS[moodId] || DEFAULT_MIX) };
-  if (!raw) return base;
-  const out = { ...base };
-  if (raw.drone  != null) out.drone  = raw.drone;
-  if (raw.pad    != null) out.pad    = raw.pad;
-  if (raw.rain   != null) out.rain   = raw.rain;
-  if (raw.analog != null) out.analog = raw.analog;
-  if (raw.tape   != null) out.analog = raw.tape;
-  if (raw.pulse  != null) out.pulse  = raw.pulse;
-  if (raw.air    != null) out.air    = raw.air;
-  return out;
 }
 
 function applyNudge(mix, intentionId) {
@@ -100,17 +94,18 @@ export default function Session() {
   const [startedAt,      setStartedAt]      = useState(null);
   const [displaySecs,    setDisplaySecs]    = useState(0);
   const [journal,        setJournal]        = useState('');
-  const [mix,            setMix]            = useState(() => normalizeMix(null, moodId));
+  const [mix,            setMix]            = useState(() => normalizeMix(null, MOOD_PRESETS[moodId] || DEFAULT_MIX));
   const [intention,      setIntention]      = useState(null);
   const [mixerOpen,      setMixerOpen]      = useState(false);
   const [roomMode,       setRoomMode]       = useState(false);
   const [roomVisible,    setRoomVisible]    = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [createdAt,      setCreatedAt]      = useState(() => new Date().toISOString());
+  const [createdAt,      setCreatedAt]      = useState(null);
   const [audioError,     setAudioError]     = useState(null);
 
   const tickRef = useRef(null);
   const transitionLockRef = useRef(false);
+  const isDismissedRef = useRef(false);
 
   // ── Restore draft ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,7 +113,7 @@ export default function Session() {
     if (draft && draft.mode === modeId && draft.mood === moodId) {
       if (draft.journalText) setJournal(draft.journalText);
       if (draft.intention)   setIntention(draft.intention);
-      if (draft.audioMix)    setMix(normalizeMix(draft.audioMix, moodId));
+      if (draft.audioMix)    setMix(normalizeMix(draft.audioMix, MOOD_PRESETS[moodId] || DEFAULT_MIX));
       if (draft.createdAt)   setCreatedAt(draft.createdAt);
       const saved = draft.accumulatedSeconds || 0;
       setAccumulated(saved); setDisplaySecs(saved);
@@ -129,7 +124,7 @@ export default function Session() {
 
   // ── Tick ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (sessionState === SESSION_STATE.PLAYING) {
+    if (TIMER_RUNNING_STATES.has(sessionState)) {
       tickRef.current = setInterval(
         () => setDisplaySecs(calcElapsed(accumulated, startedAt, true)), 1000
       );
@@ -145,27 +140,31 @@ export default function Session() {
     journalText:        journal,
     intention,
     audioMix:           mix,
-    accumulatedSeconds: calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING),
-    startedAt:          sessionState === SESSION_STATE.PLAYING ? startedAt : null,
-    isTimerRunning:     sessionState === SESSION_STATE.PLAYING,
+    accumulatedSeconds: calcElapsed(accumulated, startedAt, TIMER_RUNNING_STATES.has(sessionState)),
+    startedAt:          TIMER_RUNNING_STATES.has(sessionState) ? startedAt : null,
+    isTimerRunning:     TIMER_RUNNING_STATES.has(sessionState),
   }), [modeId, moodId, createdAt, journal, intention, mix, accumulated, startedAt, sessionState]);
 
-  useEffect(() => { saveActiveDraft(buildDraft()); }, [buildDraft]);
+  const guardSaveDraft = useCallback((draft) => {
+    if (!isDismissedRef.current) saveActiveDraft(draft);
+  }, []);
+
+  useEffect(() => { guardSaveDraft(buildDraft()); }, [buildDraft, guardSaveDraft]);
   useEffect(() => {
-    const id = setInterval(() => saveActiveDraft(buildDraft()), 2000);
+    const id = setInterval(() => guardSaveDraft(buildDraft()), 2000);
     return () => clearInterval(id);
-  }, [buildDraft]);
+  }, [buildDraft, guardSaveDraft]);
   useEffect(() => {
-    const flush = () => saveActiveDraft(buildDraft());
+    const flush = () => guardSaveDraft(buildDraft());
     document.addEventListener('visibilitychange', flush);
     window.addEventListener('beforeunload', flush);
     return () => {
       document.removeEventListener('visibilitychange', flush);
       window.removeEventListener('beforeunload', flush);
     };
-  }, [buildDraft]);
+  }, [buildDraft, guardSaveDraft]);
 
-  // ── Sync mix + nudge ───────────────────────────────────────────────────
+  // Sync mix + nudge
   useEffect(() => {
     if (sessionState === SESSION_STATE.PLAYING) {
       audioEngine.applyMix(applyNudge(mix, intention));
@@ -189,15 +188,16 @@ export default function Session() {
     try {
     if (sessionState === SESSION_STATE.IDLE) {
       setSessionState(SESSION_STATE.STARTING);
+      setStartedAt(Date.now());
+      setCreatedAt(new Date().toISOString());
       try {
         await audioEngine.play(applyNudge(mix, intention));
         setAudioError(null);
       } catch {
         setAudioError('Audio unavailable — session continues silently.');
       }
-      setStartedAt(Date.now());
       setSessionState(SESSION_STATE.PLAYING);
-    } else if (sessionState === SESSION_STATE.PLAYING) {
+    } else if (TIMER_RUNNING_STATES.has(sessionState)) {
       const elapsed = calcElapsed(accumulated, startedAt, true);
       setAccumulated(elapsed); setStartedAt(null); setDisplaySecs(elapsed);
       setSessionState(SESSION_STATE.PAUSING);
@@ -205,13 +205,13 @@ export default function Session() {
       setSessionState(SESSION_STATE.PAUSED);
     } else if (sessionState === SESSION_STATE.PAUSED) {
       setSessionState(SESSION_STATE.RESUMING);
+      setStartedAt(Date.now());
       try {
         await audioEngine.resume();
         setAudioError(null);
       } catch {
         setAudioError('Audio unavailable — continuing silently.');
       }
-      setStartedAt(Date.now());
       setSessionState(SESSION_STATE.PLAYING);
     }
     } finally {
@@ -224,7 +224,7 @@ export default function Session() {
     if (!beginTransition()) return;
 
     try {
-      const finalSecs = calcElapsed(accumulated, startedAt, sessionState === SESSION_STATE.PLAYING);
+      const finalSecs = calcElapsed(accumulated, startedAt, TIMER_RUNNING_STATES.has(sessionState));
       setSessionState(SESSION_STATE.DISPOSING);
       saveSession({
         id:              `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -233,8 +233,9 @@ export default function Session() {
         journalText:     journal.trim(),
         audioMix:        { ...mix },
         intention:       intention || null,
-        createdAt,
+        createdAt: createdAt || new Date().toISOString(),
       });
+      isDismissedRef.current = true;
       clearActiveDraft();
       await audioEngine.pause().catch(() => {});
       navigate('/history');
@@ -249,6 +250,7 @@ export default function Session() {
 
     try {
       setSessionState(SESSION_STATE.DISPOSING);
+      isDismissedRef.current = true;
       clearActiveDraft();
       await audioEngine.pause().catch(() => {});
       navigate('/');
