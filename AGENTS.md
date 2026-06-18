@@ -21,6 +21,7 @@ Before selecting skills for substantial work, check both:
 
 Relevant local tools/skills may include:
 
+- SkillSpector
 - senior-engineering-verification
 - Ponytail / ponytail-review / ponytail-audit
 - Superpowers
@@ -44,6 +45,29 @@ Relevant local tools/skills may include:
 Use these only when relevant to the task. Do not force them into every request.
 
 If a requested tool or skill is not visible, search the local machine before declaring it unavailable. If it still cannot be found, report that clearly.
+
+## Skill Intake Security Gate
+
+Before installing any third-party skill, plugin, MCP server, agent pack, or executable agent workflow, run a SkillSpector intake scan unless the human explicitly waives it.
+
+Use static-only scanning first:
+
+```powershell
+& "$env:APPDATA\uv\tools\skillspector\Scripts\python.exe" -m skillspector.cli scan <path-or-url> --no-llm
+```
+
+On this Windows machine, `uv tool install skillspector` installs the CLI, but the generated `skillspector.exe` shim may fail with `Access is denied`. Use the Python module command above as the verified fallback.
+
+Decision rule:
+
+- `LOW`: installable if it is relevant.
+- `MEDIUM`: inspect findings and install only with a clear reason.
+- `HIGH`: do not install without manual review and explicit approval.
+- `CRITICAL`: reject by default; do not install unless the human explicitly accepts the risk after reviewing the findings.
+
+Prefer selective installation of individual safe skills over whole third-party packs when a repository contains hooks, executable scripts, broad commands, or unrelated agent surfaces.
+
+Record the scan target, command form, severity, recommendation, and report path in closeout evidence when a new external skill/plugin/MCP is installed.
 
 ## Senior Engineering Verification Routing
 
@@ -86,6 +110,11 @@ External GLM and Claude review surfaces are human-mediated unless a callable too
 ## Inner Atlas R.0.X Pipeline
 
 For non-trivial R.0.X milestones, use this pipeline unless the human explicitly waives a step:
+
+0. Tool and skill intake
+   - Use SkillSpector before installing third-party skills, plugins, MCP servers, agent packs, or executable agent workflows.
+   - Prefer static-only scanning first; use LLM semantic scanning only when credentials and cost are explicitly approved.
+   - Reject or sandbox `HIGH`/`CRITICAL` findings unless the human explicitly accepts the risk.
 
 1. Design prototype
    - Use Figma Make, GPT, Open Design, or design notes when relevant.
