@@ -883,11 +883,11 @@ optional packages. Recreate the verified caches after `%TEMP%` cleanup or a
 dependency upgrade:
 
 ```powershell
-$esbuildCache = Join-Path $env:TEMP "inner-atlas-esbuild-0.27.3"
+$esbuildCache = Join-Path $env:TEMP "inner-atlas-esbuild-0.28.1"
 $nativeCache = Join-Path $env:TEMP "inner-atlas-native-win32"
 
 npm install --prefix $esbuildCache --ignore-scripts --no-audit --no-fund `
-  "@esbuild/win32-x64@0.27.3"
+  "@esbuild/win32-x64@0.28.1"
 
 npm install --prefix $nativeCache --ignore-scripts --no-audit --no-fund `
   "lightningcss-win32-x64-msvc@1.32.0" `
@@ -897,20 +897,21 @@ npm install --prefix $nativeCache --ignore-scripts --no-audit --no-fund `
 
 Keep these versions aligned with `pnpm-lock.yaml` after upgrades. Prefix
 Vitest, Vite, Playwright web-server, and build commands with the verified
-esbuild binary:
+esbuild binary and native cache path:
 
 ```powershell
-$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.27.3\node_modules\@esbuild\win32-x64\esbuild.exe"
+$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.28.1\node_modules\@esbuild\win32-x64\esbuild.exe"
+$env:NODE_PATH="$env:TEMP\inner-atlas-native-win32\node_modules"
 pnpm test
 ```
 
-Use the same environment variable for `pnpm run test:coverage` and `pnpm run test:e2e`.
+Use the same environment variables for `pnpm run test:coverage` and `pnpm run test:e2e`.
 
 The full workspace build and Playwright web server also require the verified
 Lightning CSS, Tailwind Oxide, and Rollup native cache through `NODE_PATH`:
 
 ```powershell
-$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.27.3\node_modules\@esbuild\win32-x64\esbuild.exe"
+$env:ESBUILD_BINARY_PATH="$env:TEMP\inner-atlas-esbuild-0.28.1\node_modules\@esbuild\win32-x64\esbuild.exe"
 $env:NODE_PATH="$env:TEMP\inner-atlas-native-win32\node_modules"
 $env:PORT="5173"
 $env:BASE_PATH="/"

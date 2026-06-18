@@ -6,9 +6,8 @@ export const FADE_OUT = 1.8;
 export const LAYER_CAPS = {
   drone: 0.44,
   pad: 0.50,
-  rain: 0.52,
+  rain: 0.42,
   analog: 0.18,
-  pulse: 0.22,
   air: 0.16,
 };
 
@@ -18,7 +17,6 @@ export const RAMP_TC = {
   pad: 0.45,
   rain: 0.40,
   analog: 0.28,
-  pulse: 0.14,
   air: 0.45,
 };
 
@@ -27,7 +25,6 @@ export const REVERB_SEND = {
   pad: 0.18,
   rain: 0.08,
   analog: 0.02,
-  pulse: 0.02,
   air: 0.20,
 };
 

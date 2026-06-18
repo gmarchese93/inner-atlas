@@ -66,7 +66,7 @@ function SessionCard({ session, onDelete }) {
 
         <p className="text-xs text-white/25 mt-2">{formatDate(session.createdAt)}</p>
 
-        {session.journalText && (
+        {session.journalText ? (
           <button
             onClick={() => setOpen(o => !o)}
             className="flex items-center gap-1 mt-3 text-xs text-white/30 hover:text-white/55 transition-colors"
@@ -74,6 +74,8 @@ function SessionCard({ session, onDelete }) {
             {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             {open ? 'Hide journal' : 'Show journal'}
           </button>
+        ) : (
+          <p className="text-[11px] text-white/18 mt-2 italic">No journal entry.</p>
         )}
       </div>
 

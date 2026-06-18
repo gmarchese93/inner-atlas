@@ -5,7 +5,6 @@ import { mkBurst, mkPink } from './noise';
 export function buildAnalog(engine) {
   const ctx = engine.ctx;
   const finalGain = makeFinalGain(engine, 'analog');
-  engine.finalGains.tape = finalGain;
 
   const pan = ctx.createStereoPanner();
   pan.pan.value = 0;
@@ -37,8 +36,8 @@ export function buildAnalog(engine) {
 
 export function scheduleCrackle(engine) {
   if (!engine.ctx || engine.ctx.state === 'closed') return;
-  const delay = 6000 + Math.random() * 18000;
-  engine._crackTimer = setTimeout(() => {
+  const delay = 4000 + Math.random() * 10000;
+  engine._timers.crack = setTimeout(() => {
     const finalGain = engine.finalGains.analog;
     if (!engine.ctx || !finalGain || finalGain.gain.value < 0.03) {
       scheduleCrackle(engine);
@@ -54,7 +53,7 @@ export function scheduleCrackle(engine) {
     bp.Q.value = 4;
     const envelope = ctx.createGain();
     envelope.gain.setValueAtTime(0, now);
-    envelope.gain.linearRampToValueAtTime(0.007 + Math.random() * 0.010, now + 0.003);
+    envelope.gain.linearRampToValueAtTime(0.012 + Math.random() * 0.014, now + 0.003);
     envelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.025 + Math.random() * 0.03);
     src.connect(bp);
     bp.connect(envelope);

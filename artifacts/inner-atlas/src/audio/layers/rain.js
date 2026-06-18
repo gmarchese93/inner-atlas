@@ -111,7 +111,7 @@ export function setRainSublayers(engine, value) {
 }
 
 export function scheduleDroplets(engine, intensity) {
-  clearTimeout(engine._dropTimer);
+  clearTimeout(engine._timers.drop);
   if (intensity < 0.02 || !engine._rainSubs || !AUDIBLE_STATES.has(engine.state)) return;
   const ctx = engine.ctx;
   const subDrop = engine._rainSubs.droplet;
@@ -143,8 +143,8 @@ export function scheduleDroplets(engine, intensity) {
     src.stop(now + 0.28);
 
     const interval = (1000 / rateHz) * (0.25 + Math.random() * 1.6);
-    engine._dropTimer = setTimeout(fire, interval);
+    engine._timers.drop = setTimeout(fire, interval);
   };
 
-  engine._dropTimer = setTimeout(fire, Math.random() * 900);
+  engine._timers.drop = setTimeout(fire, Math.random() * 900);
 }
