@@ -21,6 +21,8 @@ Before selecting skills for substantial work, check both:
 
 Relevant local tools/skills may include:
 
+- senior-engineering-verification
+- Ponytail / ponytail-review / ponytail-audit
 - Superpowers
 - AgentMemory
 - Gitleaks
@@ -42,6 +44,154 @@ Relevant local tools/skills may include:
 Use these only when relevant to the task. Do not force them into every request.
 
 If a requested tool or skill is not visible, search the local machine before declaring it unavailable. If it still cannot be found, report that clearly.
+
+## Senior Engineering Verification Routing
+
+`senior-engineering-verification` is the evidence discipline layer for non-trivial engineering work. It does not replace Inner Atlas skills, TDD, Claude handoffs, SkillOpt readiness, security scans, or human QA. It makes claims, review findings, remediation, and closeout evidence explicit.
+
+Use it for:
+
+- non-trivial R.0.X implementation
+- bug fixes
+- refactors
+- architecture, state, storage, routing, audio, test, build, dependency, security, release, or merge-prep work
+- Codex self-QA
+- GLM, Claude, Codex, or automated finding classification
+- final QA and merge-readiness closeout
+
+Use light mode for GPT/product briefs, early implementation planning, UX-to-engineering handoffs, and risk classification before code.
+
+Do not use it heavily for small copy edits, pure visual exploration, low-risk CSS tweaks, ideation-only tasks, throwaway prototypes, or changes that do not touch code/project state.
+
+For load-bearing claims, mark status clearly when useful:
+
+- `CONFIRMED`: backed by file inspection, command output, test result, runtime observation, or source.
+- `INFERRED`: plausible from available evidence but not directly verified.
+- `UNVERIFIED`: not checked, blocked, or outside available environment.
+
+For non-trivial work, `senior-engineering-verification` should add:
+
+- stakes/blast-radius classification
+- scope boundaries and out-of-scope items
+- baseline branch/status/test context
+- actual files/call paths inspected
+- real gate results, not assumed results
+- review finding classification
+- rollback path
+- unverified paths
+- merge readiness statement
+
+External GLM and Claude review surfaces are human-mediated unless a callable tool is explicitly available. Treat their output as findings to classify, not automatic truth.
+
+## Inner Atlas R.0.X Pipeline
+
+For non-trivial R.0.X milestones, use this pipeline unless the human explicitly waives a step:
+
+1. Design prototype
+   - Use Figma Make, GPT, Open Design, or design notes when relevant.
+   - Do not use `senior-engineering-verification` unless the prototype affects implementation constraints.
+   - Use Ponytail only lightly; design exploration is allowed to be expansive.
+
+2. GPT feature and architecture brief
+   - Use `senior-engineering-verification` in light mode.
+   - Define feature, UX goal, data touched, constraints, risks, blast radius, rollback, and required gates.
+   - Use Ponytail as a question, not a blocker: does the feature need to exist, and can native/platform/existing code cover it?
+
+3. GLM Principal Engineer pre-implementation review
+   - Human-mediated unless a callable GLM tool is explicitly available.
+   - Required review lens: `senior-engineering-verification`.
+   - Input: skill text, feature brief, and repository context.
+   - Output: blockers, constraints, required tests, implementation plan, risk classification, and rollback path.
+   - Also ask: can this be done with existing code, native browser/platform features, or installed dependencies?
+
+4. Codex implementation
+   - Input: approved brief plus GLM constraints when available.
+   - Use Inner Atlas project skills first.
+   - Use Ponytail in `full` mode by default: implement the smallest correct solution, prefer existing utilities and native browser/platform APIs, and do not add dependencies unless clearly necessary.
+   - Use `senior-engineering-verification` as a passive guardrail: stay in scope, avoid irreversible actions, preserve existing contracts.
+
+5. Codex self-QA
+   - Required use: `senior-engineering-verification`.
+   - Run applicable real gates: lint/oxlint, typecheck, unit/integration tests, build, Playwright/E2E, coverage, security/dependency scans, and manual/browser checks when relevant.
+   - Output baseline, commands run, results, unverified paths, regression risk, and merge-readiness status.
+   - Use `ponytail-review` on the diff after gates for non-trivial implementation. Remove unnecessary code only if behavior, accessibility, security, and tests remain correct.
+
+6. GLM post-implementation review
+   - Human-mediated unless callable.
+   - Required review lens: `senior-engineering-verification`.
+   - Input: changed files/diff and test results.
+   - Output: confirmed blockers, inferred risks, invalid findings, file-specific fixes, and overengineering findings.
+
+7. Codex remediation
+   - Use `senior-engineering-verification` for finding classification.
+   - Fix only valid findings.
+   - Re-run affected gates and report the delta.
+   - Use Ponytail only to reduce or delete code when the simplification preserves correctness and product intent.
+
+8. Claude Sonnet final external review
+   - Human-mediated unless callable.
+   - Required review lens: `senior-engineering-verification`, unless explicitly waived.
+   - Input: handoff doc, diff, test results, GLM findings, Codex remediation, and known unverified paths.
+   - Claude checks missed blockers, UX/product regressions, weak tests, unsafe assumptions, and unconfirmed claims.
+   - Ponytail is optional as a secondary lens for overengineering.
+
+9. Codex final remediation
+   - Classify Claude findings before acting.
+   - Fix valid findings narrowly.
+   - Re-run gates touched by the fix.
+
+10. Final QA
+    - Mandatory `senior-engineering-verification` closeout for non-trivial milestones.
+    - Include lint/typecheck/tests/build/E2E/security/dependency status, manual human QA status, confirmed/inferred/unverified paths, rollback path, and merge readiness.
+    - For large PRs only, use `ponytail-audit` before merge to find avoidable complexity.
+
+11. Merge
+    - Merge, commit, push, deploy, delete, migrate, or overwrite shared/global state only after explicit human approval.
+
+## Ponytail Routing
+
+Ponytail is the anti-overengineering layer. It complements `senior-engineering-verification`:
+
+- `senior-engineering-verification`: is it verified, safe, tested, reversible, and ready?
+- Ponytail: does this code need to exist, and is this the smallest correct implementation?
+
+Use Ponytail in `full` mode by default for Inner Atlas implementation and the portfolio. Use `lite` for experimental visual/UI exploration. Use `ultra` only for dedicated cleanup branches or when the human explicitly asks for aggressive simplification.
+
+Use Ponytail during:
+
+- Codex implementation of non-trivial features or fixes
+- dependency decisions
+- refactors and cleanup
+- Codex self-QA, through `ponytail-review`
+- final QA for large PRs, through `ponytail-audit`
+
+Do not let Ponytail remove or weaken:
+
+- input validation at trust boundaries
+- security checks
+- data-loss prevention
+- accessibility basics
+- audio safety
+- manual listening/visual QA requirements
+- tests required by the changed behavior
+- explicitly requested product behavior
+
+Prefer, in order:
+
+1. not building speculative behavior
+2. standard library or existing utilities
+3. native browser/platform features
+4. already-installed dependencies
+5. one-line or localized code
+6. only then, the minimum new structure that works
+
+## Skill Inventory Policy
+
+`skill-inventory-*.txt` files are generated local machine inventory artifacts. They are useful for diagnosing the current workstation, but they are not canonical project source because installed tools, paths, versions, and plugin state change often.
+
+Do not treat an old skill inventory as proof that a tool is currently available. For current capability, inspect the active visible skill list, `codex plugin list`, local plugin caches, and repository `AGENTS.md`.
+
+Do not commit machine-specific skill inventory files unless the human explicitly asks for a dated operational snapshot. Prefer documenting stable routing rules in `AGENTS.md` and volatile inventory in local notes or closeout evidence.
 
 Current Headroom caveat: Headroom has been evaluated for context/log compression but is not currently installed as a usable Windows CLI. `headroom --help` must succeed before routing work through it. Native `uv tool install` attempts are blocked on this machine because Headroom's Rust/Python build produces generated Cargo executables that Windows refuses to run with Access Denied, even after Visual Studio Build Tools installation. Do not use `headroom learn` or let Headroom write to `AGENTS.md` unless explicitly approved.
 
@@ -836,6 +986,8 @@ Verification guidance:
 For workflow:
 
 - use Superpowers skills for systematic debugging, TDD, code review handling, plan execution, and verification when relevant
+- use `senior-engineering-verification` as the non-trivial-work evidence spine for baseline, claims, gates, rollback, finding classification, and closeout
+- use Ponytail as the implementation simplification guardrail: no speculative abstractions, no unnecessary dependencies, and shortest correct diff that preserves safety
 
 ## Automated Testing Routing
 
@@ -945,6 +1097,7 @@ For reviews:
 
 - use `inner-atlas-review`
 - use review/verification skills
+- use `senior-engineering-verification` to classify findings as `VALID BLOCKER`, `VALID NON-BLOCKER`, `INFERRED RISK`, `FALSE POSITIVE`, `OUT OF SCOPE`, or `NEEDS MORE EVIDENCE`
 - prioritize bugs, regressions, accessibility, state risks, and missing tests
 
 For review feedback:
@@ -1149,6 +1302,7 @@ Before modifying code, state:
 - selected skills
 - rejected obvious skills, if any
 - why each selected skill applies
+- stakes/blast radius for non-trivial work
 - expected files likely touched
 - implementation plan
 - risks and tradeoffs
@@ -1160,9 +1314,12 @@ After implementation, report:
 - selected skills
 - files changed
 - summary of changes
+- baseline vs final status for non-trivial work
 - commands run
 - verification evidence
 - browser/manual QA evidence when UI or behavior changed
+- confirmed, inferred, and unverified paths when relevant
+- rollback path for risky work
 - remaining risks
 - deferred refactors
 
