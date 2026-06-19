@@ -29,6 +29,7 @@ Relevant local tools/skills may include:
 - emil-design-eng / review-animations
 - shadcn
 - canvas-design
+- frontend-checklist-global
 - Addy agent skills, selectively installed:
   - frontend-ui-engineering
   - browser-testing-with-devtools
@@ -1225,6 +1226,7 @@ For design critique and audits:
 
 - use `design-critique` when reviewing screenshots, Figma links, mockups, or described screens for hierarchy, usability, consistency, and accessibility
 - use `web-design-guidelines` when explicitly asked to audit UI code, accessibility, UX best practices, or compliance with web interface guidelines
+- use `frontend-checklist-global` for broad Front-End Checklist audits across HTML, CSS, JavaScript/TypeScript, performance, accessibility, SEO, security headers, images, privacy, i18n, and testing; prefer it as a pre-release/pre-merge quality gate after code exists, not as a creative direction source
 - use `canvas-design` only for static art/design artifacts such as posters, visual philosophies, brand boards, PNG/PDF canvases, or museum-quality one-page visual pieces; do not use it for production React UI
 - use browser/manual QA evidence when visual behavior changes
 
@@ -1388,6 +1390,8 @@ Use `shadcn` only when the work involves shadcn/ui primitives, registries, prese
 Use `emil-design-eng` case-by-case for interaction polish, micro-interactions, animation taste, and invisible UI craft after the product direction is clear. Use `review-animations` for motion-code review or remediation. Do not let motion polish override accessibility, reduced-motion behavior, performance, or Inner Atlas quiet/reflective tone.
 
 Use `web-design-guidelines` for UI code/accessibility/UX audits and pre-merge visual checks. Treat its fetched remote guidelines as mutable external review input: classify findings before acting and avoid broad redesigns unless the user asked for them.
+
+Use `frontend-checklist-global` for comprehensive frontend quality audits and launch-readiness checks. It covers broad implementation concerns such as semantic HTML, CSS, JavaScript/TypeScript runtime behavior, Core Web Vitals, accessibility, SEO, security headers, image delivery, privacy, i18n, and testing. For Inner Atlas, use it mainly on UI surfaces, routes, public pages, and release gates; do not route audio engine logic, storage/state-machine debugging, or product taste decisions through it.
 
 Use `canvas-design` only for static visual artifacts: posters, art boards, visual philosophies, brand boards, PNG/PDF canvases, or non-production design studies. It is not a product UI implementation skill and must not drive React component architecture, runtime animation, routing, storage, or audio work.
 

@@ -37,6 +37,12 @@
       "skillPath": "skills/emil-design-eng/SKILL.md",
       "computedHash": "ac3fc5b4e206488ffc408a2806f829bb2e5eaf518fded09be34790685c2b3a0d"
     },
+    "frontend-checklist-global": {
+      "source": "thedaviddias/Front-End-Checklist",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-checklist-global/SKILL.md",
+      "computedHash": "e57d5c83ba11a1707ab9116b43926d04d697ea19ffba93dd3f7ce814632aac73"
+    },
     "frontend-ui-engineering": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",
