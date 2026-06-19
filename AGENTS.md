@@ -22,6 +22,7 @@ Before selecting skills for substantial work, check both:
 Relevant local tools/skills may include:
 
 - SkillSpector
+- codebase-memory-mcp
 - senior-engineering-verification
 - Ponytail / ponytail-review / ponytail-audit
 - Superpowers
@@ -69,6 +70,29 @@ Prefer selective installation of individual safe skills over whole third-party p
 
 Record the scan target, command form, severity, recommendation, and report path in closeout evidence when a new external skill/plugin/MCP is installed.
 
+## Codebase Memory MCP Routing
+
+`codebase-memory-mcp` is an optional structural code-intelligence layer for repository graph queries. It complements, but does not replace, direct file inspection with `rg`, source reads, tests, browser checks, or senior engineering verification.
+
+Use it when the task benefits from:
+
+- architecture overview
+- call graph or dependency tracing
+- impact analysis before refactors
+- route/component/module mapping
+- dead-code signals
+- cross-file risk discovery
+- ADR/context lookup
+
+Do not use it as the only evidence for correctness. Treat graph results as structural evidence that still needs source-file confirmation before edits or review claims.
+
+Current local policy:
+
+- `auto_index` should remain `false` unless explicitly approved.
+- index a repo intentionally before using graph tools.
+- do not commit `.codebase-memory/` artifacts unless the human approves a team-shared graph policy.
+- prefer the standard binary first; use the UI variant only when visual graph exploration is explicitly useful.
+
 ## Senior Engineering Verification Routing
 
 `senior-engineering-verification` is the evidence discipline layer for non-trivial engineering work. It does not replace Inner Atlas skills, TDD, Claude handoffs, SkillOpt readiness, security scans, or human QA. It makes claims, review findings, remediation, and closeout evidence explicit.
@@ -115,6 +139,7 @@ For non-trivial R.0.X milestones, use this pipeline unless the human explicitly 
    - Use SkillSpector before installing third-party skills, plugins, MCP servers, agent packs, or executable agent workflows.
    - Prefer static-only scanning first; use LLM semantic scanning only when credentials and cost are explicitly approved.
    - Reject or sandbox `HIGH`/`CRITICAL` findings unless the human explicitly accepts the risk.
+   - For structural MCPs such as `codebase-memory-mcp`, install in controlled mode first, avoid broad auto-config, and document artifact policy before indexing.
 
 1. Design prototype
    - Use Figma Make, GPT, Open Design, or design notes when relevant.
