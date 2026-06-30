@@ -30,6 +30,10 @@ Relevant local tools/skills may include:
 - shadcn
 - canvas-design
 - frontend-checklist-global
+- devouring-details-design
+- malikkotb-lab
+- creative-coding-reference-router
+- nature-of-code-p5-systems
 - Addy agent skills, selectively installed:
   - frontend-ui-engineering
   - browser-testing-with-devtools
@@ -1218,6 +1222,8 @@ For frontend design implementation:
 - use `brandkit`, `imagegen-frontend-web`, or `imagegen-frontend-mobile` only for generated reference images, brand boards, comps, or mobile/web visual frames; do not treat their output as production code
 - use `emil-design-eng` for component polish, interaction detail, animation judgment, and invisible UI craft after the product direction is already clear
 - use `review-animations` when reviewing or repairing animation/motion code, especially duration, easing, transform origin, reduced-motion behavior, and performance
+- use `devouring-details-design` for detailed interaction review or implementation when timing, pointer/keyboard parity, focus states, gesture thresholds, interruptibility, and reduced-motion behavior determine quality
+- use `malikkotb-lab` only for experimental lab/portfolio-style creative coding surfaces such as image trails, shader text, 3D galleries, pixel distortion, parallax collages, or proof-of-craft visual prototypes; do not use it for ordinary Inner Atlas session UI or audio/state logic
 - use `shadcn` when adding, auditing, or composing shadcn/ui components, registries, presets, or `components.json`; use it as a component primitive layer, not as Inner Atlas visual identity
 - use `ui-ux-pro-max` only as an optional UI/UX reference lookup for design systems, layout/accessibility/palette checks, UX guideline searches, or chart/data-visualization guidance when those references directly support the task
 - do not use generic frontend design skills for audio engine logic, storage, state machines, or non-visual refactors
@@ -1389,9 +1395,28 @@ Use `shadcn` only when the work involves shadcn/ui primitives, registries, prese
 
 Use `emil-design-eng` case-by-case for interaction polish, micro-interactions, animation taste, and invisible UI craft after the product direction is clear. Use `review-animations` for motion-code review or remediation. Do not let motion polish override accessibility, reduced-motion behavior, performance, or Inner Atlas quiet/reflective tone.
 
+Use `devouring-details-design` when the task is specifically about interaction feel: hover, press, drag, reveal, focus, keyboard parity, gesture thresholds, interruptibility, repeated input, or reduced-motion behavior. It is a precision layer for behavior and ergonomics, not a general visual redesign skill.
+
+Use `malikkotb-lab` only for experimental creative-coding/lab surfaces or reference prototypes where one strong visual idea needs a clear input model, rendering strategy, fallback, accessibility strategy, and performance budget. Do not use it for routine R0.X app implementation, audio engine work, storage, state machines, or copying another designer's assets/code.
+
+Use `creative-coding-reference-router` when evaluating creative-coding references such as `awesome-creative-coding`, choosing between p5.js, Canvas, WebGL, shaders, Three.js, or math/inspiration resources, or converting references into scoped Inner Atlas prototypes. Treat it as research and routing, not as permission to add dependencies.
+
+Use `nature-of-code-p5-systems` when a p5.js or Canvas visual layer needs natural systems such as vectors, forces, oscillation, particles, flow fields, steering, fractals, cellular automata, or emergent mood scenes. Use it with `inner-atlas-p5-visual-layer` when that skill is available. Do not use it for ordinary UI, forms, layout, storage, audio state, or React routing.
+
 Use `web-design-guidelines` for UI code/accessibility/UX audits and pre-merge visual checks. Treat its fetched remote guidelines as mutable external review input: classify findings before acting and avoid broad redesigns unless the user asked for them.
 
 Use `frontend-checklist-global` for comprehensive frontend quality audits and launch-readiness checks. It covers broad implementation concerns such as semantic HTML, CSS, JavaScript/TypeScript runtime behavior, Core Web Vitals, accessibility, SEO, security headers, image delivery, privacy, i18n, and testing. For Inner Atlas, use it mainly on UI surfaces, routes, public pages, and release gates; do not route audio engine logic, storage/state-machine debugging, or product taste decisions through it.
+
+Focused Front-End Checklist rule skills are installed for Inner Atlas. Use them as targeted zoom-in references, not as a default bundle. Load at most the few rules directly relevant to the changed surface:
+
+- Core UI/accessibility: `button-name`, `aria-labels`, `aria-live-regions`, `keyboard-navigation`, `focus-management`, `focus-styles`, `touch-targets`, `color-contrast`, `heading-hierarchy`, `landmark-one-main`, `skip-link`, `reduced-motion`, `zoom-reflow`, `text-resizing`.
+- Motion/performance: `animation-performance`, `cumulative-layout-shift`, `largest-contentful-paint`, `interaction-to-next-paint`, `font-loading`, `page-weight`, `code-splitting`, `import-on-interaction`, `import-on-visibility`.
+- Images/visuals: `alt-text`, `decorative-elements`, `dimensions`, `responsive-images`, `srcset`, `critical-images`, `image-optimization`, `svg-optimization`.
+- JavaScript/runtime: `web-storage`, `error-handling`, `memory-leaks`, `runtime-validation`, `json-safety`, `no-explicit-any`, `no-unchecked-indexed-access`, `typescript-strict-mode`.
+- Testing/release: `e2e-testing`, `unit-tests`, `integration-testing`, `accessibility-testing`, `visual-regression`, `performance-budget`, `dependency-audit`.
+- Public/deploy later: `https`, `content-security-policy`, `hsts`, `x-content-type`, `x-frame-options`, `referrer-policy`, `permissions-policy`, `canonical-url`, `meta-title`, `meta-description`, `og-tags`, `robots-txt`, `sitemap`; use these only when public deployment, headers, metadata, SEO, or launch readiness are in scope.
+
+Do not use heavy SEO, local business, affiliate, product, service-area, physical-address, YMYL, or auth-specific Front-End Checklist skills for Inner Atlas unless the product scope explicitly returns to those surfaces.
 
 Use `canvas-design` only for static visual artifacts: posters, art boards, visual philosophies, brand boards, PNG/PDF canvases, or non-production design studies. It is not a product UI implementation skill and must not drive React component architecture, runtime animation, routing, storage, or audio work.
 
