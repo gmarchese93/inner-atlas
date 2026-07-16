@@ -55,7 +55,6 @@ Relevant local tools/skills may include:
 - Oxc / Oxlint / Oxfmt
 - SkillOpt
 - Spec Kit / Specify CLI
-- Open Design
 - book-to-skill
 - awesome-design-md reference library
 - agency-agents / Codex custom agents
@@ -166,76 +165,204 @@ For non-trivial work, `senior-engineering-verification` should add:
 
 External GLM and Claude review surfaces are human-mediated unless a callable tool is explicitly available. Treat their output as findings to classify, not automatic truth.
 
-## Inner Atlas R.0.X Pipeline
+## Inner Atlas Definitive Engineering Pipeline
 
-For non-trivial R.0.X milestones, use this pipeline unless the human explicitly waives a step:
+Effective: 2026-06-30.
 
-0. Tool and skill intake
-   - Use SkillSpector before installing third-party skills, plugins, MCP servers, agent packs, or executable agent workflows.
-   - Prefer static-only scanning first; use LLM semantic scanning only when credentials and cost are explicitly approved.
-   - Reject or sandbox `HIGH`/`CRITICAL` findings unless the human explicitly accepts the risk.
-   - For structural MCPs such as `codebase-memory-mcp`, install in controlled mode first, avoid broad auto-config, and document artifact policy before indexing.
+### Project Context
 
-1. Design prototype
-   - Use Figma Make, GPT, Open Design, or design notes when relevant.
-   - Do not use `senior-engineering-verification` unless the prototype affects implementation constraints.
-   - Use Ponytail only lightly; design exploration is allowed to be expansive.
+Inner Atlas is a local-first, privacy-sensitive, emotionally reflective application. The product may involve journaling, mood/intention data, guided sessions, Web Audio, local persistence, future AI reflection, future sync/auth, and sensitive personal content.
 
-2. GPT feature and architecture brief
-   - Use `senior-engineering-verification` in light mode.
-   - Define feature, UX goal, data touched, constraints, risks, blast radius, rollback, and required gates.
-   - Use Ponytail as a question, not a blocker: does the feature need to exist, and can native/platform/existing code cover it?
+The core engineering priority is: protect user trust before adding intelligence, beauty, or complexity.
 
-3. GLM Principal Engineer pre-implementation review
-   - Human-mediated unless a callable GLM tool is explicitly available.
-   - Required review lens: `senior-engineering-verification`.
-   - Input: skill text, feature brief, and repository context.
-   - Output: blockers, constraints, required tests, implementation plan, risk classification, and rollback path.
-   - Also ask: can this be done with existing code, native browser/platform features, or installed dependencies?
+The product must not silently compromise:
 
-4. Codex implementation
-   - Input: approved brief plus GLM constraints when available.
-   - Use Inner Atlas project skills first.
-   - Use Ponytail in `full` mode by default: implement the smallest correct solution, prefer existing utilities and native browser/platform APIs, and do not add dependencies unless clearly necessary.
-   - Use `senior-engineering-verification` as a passive guardrail: stay in scope, avoid irreversible actions, preserve existing contracts.
+- private emotional data
+- local-first assumptions
+- Web Audio reliability
+- storage integrity
+- user agency
+- review evidence discipline
 
-5. Codex self-QA
-   - Required use: `senior-engineering-verification`.
-   - Run applicable real gates: lint/oxlint, typecheck, unit/integration tests, build, Playwright/E2E, coverage, security/dependency scans, and manual/browser checks when relevant.
-   - Output baseline, commands run, results, unverified paths, regression risk, and merge-readiness status.
-   - Use `ponytail-review` on the diff after gates for non-trivial implementation. Remove unnecessary code only if behavior, accessibility, security, and tests remain correct.
+### Model Roles
 
-6. GLM post-implementation review
-   - Human-mediated unless callable.
-   - Required review lens: `senior-engineering-verification`.
-   - Input: changed files/diff and test results.
-   - Output: confirmed blockers, inferred risks, invalid findings, file-specific fixes, and overengineering findings.
+#### GPT / Codex 5.5 xhigh
 
-7. Codex remediation
-   - Use `senior-engineering-verification` for finding classification.
-   - Fix only valid findings.
-   - Re-run affected gates and report the delta.
-   - Use Ponytail only to reduce or delete code when the simplification preserves correctness and product intent.
+Primary reasoning and architecture authority. Use for feature architecture, product/system trade-offs, final finding classification, deciding between conflicting reviewer opinions, and high-risk architecture arbitration.
 
-8. Claude Sonnet final external review
-   - Human-mediated unless callable.
-   - Required review lens: `senior-engineering-verification`, unless explicitly waived.
-   - Input: handoff doc, diff, test results, GLM findings, Codex remediation, and known unverified paths.
-   - Claude checks missed blockers, UX/product regressions, weak tests, unsafe assumptions, and unconfirmed claims.
-   - Ponytail is optional as a secondary lens for overengineering.
+#### GLM 5.2
 
-9. Codex final remediation
-   - Classify Claude findings before acting.
-   - Fix valid findings narrowly.
-   - Re-run gates touched by the fix.
+Adversarial Principal Engineer reviewer. GLM's role is to attack the plan and implementation before reality does.
 
-10. Final QA
-    - Mandatory `senior-engineering-verification` closeout for non-trivial milestones.
-    - Include lint/typecheck/tests/build/E2E/security/dependency status, manual human QA status, confirmed/inferred/unverified paths, rollback path, and merge readiness.
-    - For large PRs only, use `ponytail-audit` before merge to find avoidable complexity.
+Use GLM for architecture, privacy, local-first data, Web Audio lifecycle, state/persistence, security, AI data-boundary, testing, deployment, and merge risks.
 
-11. Merge
-    - Merge, commit, push, deploy, delete, migrate, or overwrite shared/global state only after explicit human approval.
+GLM findings are candidate findings, not automatic truth. Every finding must be classified before remediation.
+
+#### Codex
+
+Implementation, debugging, testing, and documentation partner. Use for code implementation, refactoring, lint/typecheck/build, unit tests, E2E/Playwright, bug fixing, documentation updates, and evidence reporting.
+
+#### Claude Sonnet
+
+Independent final external reviewer. Use for product/UX sanity, missed code or privacy risks, unclear claims, overengineering detection, emotional tone and user trust, and whether the implementation remains safe and humane.
+
+Claude findings are candidate findings and must be classified.
+
+#### Human
+
+Final product, safety, and merge authority. Human approval is required before commit, push, merge, deployment, destructive action, or irreversible migration.
+
+### Required Context
+
+For every medium/high-risk task, provide:
+
+- feature brief
+- current repository context
+- affected files
+- relevant product assumptions
+- `inner-atlas-principal-engineer-skill.md`
+- `senior-engineering-verification` rules
+- known constraints
+- expected gates
+
+### Pipeline
+
+#### 1. Design Prototype
+
+Use GPT, Figma Make, manual notes, or lightweight mockups. Do not use full `senior-engineering-verification` unless the prototype affects implementation constraints.
+
+Output: UX idea, target flow, user state touched, expected behavior, and non-goals.
+
+#### 2. GPT Feature + Architecture Brief
+
+Required. Use `senior-engineering-verification` in light mode.
+
+Define the feature goal, user problem, UX behavior, data touched, privacy and local-first impact, state model, storage impact, Web Audio impact, AI/API impact, constraints, risks, blast radius, rollback path, required gates, and acceptance criteria.
+
+Output: implementation-ready feature brief, light/medium/high risk classification, and explicit non-goals.
+
+#### 3. GLM Adversarial Pre-Implementation Review
+
+Required for every medium/high-risk task and always required for journal/session persistence, mood/intention data, localStorage/sessionStorage/IndexedDB, Web Audio, AI features, auth, sync, Supabase/RLS, analytics, export/import, routing architecture, deployment, security headers, dependency changes, and major refactors.
+
+Input: `inner-atlas-principal-engineer-skill.md`, GPT feature brief, relevant repository context, known constraints, and `senior-engineering-verification` rules.
+
+GLM must output blocking concerns before coding, required implementation constraints and tests, edge cases, risk classification, rollback considerations, and a concise Codex implementation plan. Each claim must be labeled `confirmed`, `inferred`, `not tested`, or `blocked`.
+
+#### 4. Finding Classification Before Coding
+
+GPT/Codex classifies every GLM pre-review finding as:
+
+- valid blocker
+- valid high-risk constraint
+- valid implementation constraint
+- valid test requirement
+- duplicate
+- invalid
+- speculative
+- not actionable
+
+Codex receives only accepted constraints and accepted test requirements.
+
+If GLM raises plausible privacy loss, data loss, AI leakage, storage corruption, a security issue, or Web Audio lifecycle breakage, do not proceed until it is explicitly disproven or accepted as a known risk.
+
+#### 5. Codex Implementation
+
+Input: GPT brief, accepted GLM constraints and test requirements, and relevant skill rules.
+
+Codex must inspect before editing, stay in scope, preserve existing contracts, avoid irreversible actions and speculative dependencies, implement the minimum viable architecture, avoid hidden background analysis and unbounded timers/retries/audio nodes/API calls, protect local-first privacy assumptions, and document changed files.
+
+#### 6. Codex Self-QA
+
+Required. Use `senior-engineering-verification`.
+
+Minimum gates: lint, typecheck, tests, build, Playwright/E2E when relevant, and security/dependency checks when relevant.
+
+For storage changes, verify migration/recovery or state that it is not tested; cover malformed, empty, and old data plus quota/private-mode considerations where applicable.
+
+For Web Audio changes, cover user-gesture start, pause/resume, cleanup/unmount, multiple-session behavior, and mobile/Safari considerations where applicable.
+
+For AI/API changes, cover consent boundaries, data sent, provider failure, token/cost limits, and no hidden background analysis.
+
+Output: baseline, commands and exact results, changed files, unverified paths, known limitations, and regression risk.
+
+#### 7. GLM Post-Implementation Review
+
+Required for every medium/high-risk task.
+
+Input: `inner-atlas-principal-engineer-skill.md`, changed files or Git diff, Codex test results, known limitations, unverified paths, and `senior-engineering-verification` rules.
+
+GLM reviews security, privacy, reliability, scalability, performance, state architecture, local-first persistence, Web Audio lifecycle, AI prompt/data boundaries, observability, error handling, idempotency, testing, deployment risk, and UX failure modes.
+
+GLM must output blocking and high-risk issues, non-blocking improvements, invalid/speculative findings, file-specific fixes, required pre-merge tests, manual QA scenarios, and a final recommendation of `approve`, `approve with follow-up`, or `block`. Each claim must be labeled `confirmed`, `inferred`, `not tested`, or `blocked`.
+
+#### 8. Finding Classification After GLM Review
+
+GPT/Codex classifies every GLM finding as:
+
+- valid blocker
+- valid high-risk issue
+- valid non-blocking improvement
+- duplicate
+- invalid
+- speculative
+- not actionable
+
+GLM supplies adversarial findings; it does not directly control implementation. GPT/Codex classify them, and the human decides final acceptance.
+
+Do not merge until disproven or fixed if GLM raises plausible data loss, private data leakage, AI data-boundary violation, storage corruption, unsafe migration, auth/RLS/security issues, serious Web Audio lifecycle leaks, broken E2E paths, or deployment-breaking issues.
+
+#### 9. Codex Remediation
+
+Fix only valid findings. Address blockers first, avoid broad rewrites, re-run affected gates, report the delta and unresolved risks, and update documentation if behavior changed.
+
+#### 10. Claude Sonnet Final External Review
+
+Required for medium/high-risk tasks.
+
+Input: handoff document, diff, test results, classified GLM findings, unresolved limitations, and known unverified paths.
+
+Claude independently checks missed issues, UX/product-quality risks, user trust, emotional tone, privacy language, overengineering, under-testing, unverified claims, and unsafe assumptions. Classify Claude findings before implementation.
+
+#### 11. Codex Final Remediation
+
+Fix valid Claude findings, re-run gates touched by each fix, and report changed files, remaining limitations, and merge readiness.
+
+#### 12. Final QA Closeout
+
+Mandatory before merge. Use `senior-engineering-verification`.
+
+Include E2E where relevant, lint, typecheck, build, tests, security/dependency checks where relevant, manual human QA, confirmed and inferred claims, not-tested paths, blocked verification, rollback path, and final merge recommendation.
+
+#### 13. Merge
+
+Merge only after explicit human approval. No commit, push, merge, release, deployment, migration, destructive action, or irreversible operation unless explicitly requested.
+
+### Escalation Rules
+
+#### Light Pipeline
+
+Use for copy, visual polish, minor component tweaks, and small non-persistent UI behavior.
+
+Flow: GPT brief -> Codex implementation -> Codex QA -> Human QA -> merge.
+
+#### Medium Pipeline
+
+Use for component state, routing, session UI, non-sensitive local state, UI flow changes, minor audio behavior, tests, and refactors.
+
+Flow: GPT brief -> GLM pre-review if risk touches state/audio/privacy -> Codex implementation -> Codex QA -> GLM post-review if used -> remediation -> optional Claude review -> Human QA -> merge.
+
+#### High-Risk Pipeline
+
+Use for private user data, journal/session persistence, localStorage/IndexedDB schema, export/import, AI, auth, sync, Supabase/RLS, analytics, the Web Audio engine, deployment, security headers, and major refactors.
+
+Flow: GPT brief -> GLM adversarial pre-review -> finding classification -> Codex implementation -> Codex QA -> GLM post-review -> finding classification -> Codex remediation -> Claude final external review -> Codex final remediation -> final QA closeout -> Human approval -> merge.
+
+### Definition of Done
+
+A task is done only when scope and risk are explicit, implementation is complete, required gates have run, evidence and unverified paths are reported, GLM/Claude findings are classified, rollback is known, and human approval is received.
+
+Final principle: engineering-first pipeline with product and emotional-safety review.
 
 ## Ponytail Routing
 
@@ -409,9 +536,9 @@ Then stop and ask for explicit approval before running:
 
 The R.0.X milestone is not closeout-ready until the readiness report exists or the user explicitly waives it.
 
-## Claude Web Architecture Handoff
+## Claude Sonnet Final External Review Handoff
 
-Claude Web / Sonnet is a human-mediated architecture and diff-review surface. Codex cannot call it directly.
+Claude Sonnet is the human-mediated final external review surface unless a callable tool is explicitly available.
 
 For non-trivial R.0.X milestones, create or reuse:
 
@@ -425,15 +552,15 @@ The template is:
 
 `docs/milestones/templates/claude-architecture-handoff.md`
 
-Create the handoff before implementation when any of these applies:
+Create or update the handoff after GLM post-implementation review, finding classification, and Codex remediation when any of these applies:
 
-- a new non-trivial R.0.X milestone starts
-- architecture, state flow, persistence, audio, routing, or data contracts change
-- a new runtime dependency is proposed
-- a cross-system or high-risk refactor is planned
-- the user asks for Claude architecture confirmation
+- the task is medium or high risk
+- architecture, state flow, persistence, audio, routing, or data contracts changed
+- a runtime dependency changed
+- a cross-system or high-risk refactor was implemented
+- the human explicitly requests Claude review
 
-Codex must fill the repository-evidence and pre-plan sections, tell the user the handoff is ready, and stop for the human-mediated Claude response unless the user explicitly waives the checkpoint.
+Codex must fill the repository evidence, diff summary, verification results, classified GLM findings, unresolved limitations, and known unverified paths; then stop for the human-mediated Claude response unless the step is optional under the risk pipeline or explicitly waived.
 
 After the user returns Claude's response, Codex must classify each recommendation as:
 
@@ -442,7 +569,7 @@ After the user returns Claude's response, Codex must classify each recommendatio
 - false positive
 - requires human decision
 
-Record the classification and final human decisions in the same handoff artifact before implementation continues.
+Record the classification and final human decisions in the same handoff artifact before Codex final remediation continues.
 
 For final Claude diff review, update the same artifact with changed files, verification evidence, manual QA status, remaining risks, and the review prompt.
 
@@ -487,7 +614,7 @@ If project-local initialization is approved, prefer Codex skills mode:
 
 Before using Spec Kit, state:
 
-- why Spec Kit is needed instead of the existing GPT scope / Claude architecture / Codex implementation pipeline
+- why Spec Kit is needed instead of the definitive GPT / adversarial GLM / Codex / Claude final-review pipeline
 - whether the operation is read-only CLI inspection, project initialization, spec creation, planning, task generation, analysis, or implementation
 - expected files or directories it may create or modify
 - whether outputs are throwaway planning artifacts or production-facing project process
@@ -499,95 +626,6 @@ After using Spec Kit, report:
 - whether `.specify/` or agent skills/commands were added
 - how the resulting spec/plan/tasks map to the Inner Atlas roadmap
 - what should be sent to Claude for architecture or diff-risk review
-
-## Open Design Routing
-
-Open Design is an optional local-first design/prototype/artifact system for agent-native design workflows.
-
-It is installed as the Windows desktop app at:
-
-`C:\Users\gmarchese\AppData\Local\Programs\Open Design\Open Design.exe`
-
-Bundled reference assets are available under:
-
-`C:\Users\gmarchese\AppData\Local\Programs\Open Design\resources\open-design\`
-
-Open Design may provide:
-
-- DESIGN.md design systems
-- agent skills
-- plugins
-- prototype generation
-- artifact previews
-- MCP access through the configured Codex `open-design` MCP server
-- Codex/Cursor/Claude-compatible design-source workflows
-- HTML/PDF/PPTX/MP4 export
-- HyperFrames motion workflows
-- design-system-driven artifact generation
-
-Open Design is not part of the normal Inner Atlas R.0.X implementation workflow.
-
-Use Open Design only when the task explicitly involves:
-
-- design-system exploration
-- creating or refining Inner Atlas DESIGN.md
-- visual-system work
-- UI prototype generation
-- landing page or waitlist page prototyping
-- dashboard/live artifact prototyping
-- deck/presentation artifact generation
-- image/video/motion artifact exploration
-- HyperFrames motion graphics
-- DESIGN.md-driven implementation research
-- comparing design systems
-- generating throwaway prototypes for review before production implementation
-
-Do not use Open Design for:
-
-- ordinary Inner Atlas R.0.X implementation
-- audio engine work
-- Web Audio bugs
-- localStorage/session logic
-- small CSS edits
-- small TypeScript edits
-- normal build/lint work
-- database/backend logic
-- GitHub merge work
-- routine code review
-- production implementation unless explicitly approved
-
-Open Design is not an Inner Atlas runtime dependency. Do not add it to package.json or lockfiles.
-
-Do not copy generated artifacts, DESIGN.md files, plugins, HTML, or prototype outputs into Inner Atlas production code without explicit approval.
-
-Current install caveat: the desktop app is installed, and Codex has an `open-design` MCP server configured with the packaged Node CLI entrypoint. The Open Design `od` command is still not on PATH; Git Bash `od` is GNU octal-dump, not Open Design. Use the configured MCP server or the packaged CLI directly:
-
-`C:\Program Files\nodejs\node.exe "C:\Users\gmarchese\AppData\Local\Programs\Open Design\resources\app\prebundled\daemon\daemon-cli.mjs" ...`
-
-The MCP server proxies to a running Open Design daemon at `http://127.0.0.1:7456`. Start the Open Design desktop app or daemon before expecting MCP tool calls to return live projects/artifacts. If the current Codex session does not expose Open Design tools yet, restart Codex so it reloads MCP config.
-
-Figma Make remains useful for exploratory UI/UX design and visual ideation. Open Design is useful for agent-native artifact generation, DESIGN.md-driven prototypes, and Codex-accessible design-system references. Codex remains responsible for production implementation in the Inner Atlas repo, and Claude remains responsible for architecture/product review and final diff risk analysis.
-
-The Inner Atlas visual direction in this file remains authoritative. Open Design output is reference material until reviewed and explicitly accepted.
-
-Before using Open Design, state:
-
-- why Open Design is needed
-- why Figma/Codex alone is insufficient
-- selected Open Design mode, skill, plugin, or design system if known
-- whether output is throwaway prototype, design reference, or production candidate
-- expected files or artifacts
-- whether generated output will remain outside the repo
-
-After using Open Design, report:
-
-- command/tool used
-- artifact or design system used
-- files/artifacts generated
-- whether anything was copied into Inner Atlas
-- visual/UX findings
-- production implementation recommendations
-- what should be discarded, kept as reference, or passed to Claude/Codex
 
 ## Book-To-Skill / Codex Knowledge Skill Generation Routing
 
@@ -999,9 +1037,9 @@ For tool evaluation:
 
 Agency agents may supplement the pipeline, but must not silently replace it.
 
-For small R0.X tasks, prefer the normal pipeline:
+For small R0.X tasks, use the definitive pipeline's light-risk flow:
 
-GPT scope / Claude architecture / Codex implementation / Codex local review / Claude diff review / GitHub merge.
+GPT brief / Codex implementation / Codex QA / Human QA / human-approved merge.
 
 For large R0.X or beta-readiness tasks, agency-agents may supplement the pipeline with specialist review.
 
@@ -1305,7 +1343,6 @@ Preferred workflow:
 Relevant skills to consider when DESIGN.md work is in scope:
 
 - `inner-atlas-visual-refactor`
-- Open Design, only for design-system references, throwaway prototypes, artifacts, or DESIGN.md exploration
 - `frontend-design`
 - `design-taste-frontend`
 - `emil-design-eng`
