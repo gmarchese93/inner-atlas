@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, ChevronDown, ChevronUp, Download, X } from 'lucide-react';
 import { loadSessions, deleteSession, clearAllSessions, exportSessions } from '../lib/sessionStorage';
 import { MODES, MOODS } from '../lib/constants';
+import { getSceneById } from '../lib/scenes';
 
 function formatDuration(secs) {
   if (secs < 60) return `${secs}s`;
@@ -29,6 +30,7 @@ function SessionCard({ session, onDelete }) {
   const [open, setOpen] = useState(false);
   const mode = MODES.find(m => m.id === session.mode);
   const mood = MOODS.find(m => m.id === session.mood);
+  const scene = getSceneById(session.sceneId);
 
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.03] overflow-hidden">
@@ -46,6 +48,11 @@ function SessionCard({ session, onDelete }) {
             {mood && (
               <span className="text-xs px-2.5 py-1 rounded-full border border-white/10 text-white/50 bg-white/5">
                 {mood.emoji} {mood.label}
+              </span>
+            )}
+            {scene?.moodId === session.mood && (
+              <span className="text-xs px-2.5 py-1 rounded-full border border-white/8 text-white/42 bg-white/[0.03]">
+                {scene.label}
               </span>
             )}
             <span className="text-xs text-white/30">{formatDuration(session.durationSeconds)}</span>

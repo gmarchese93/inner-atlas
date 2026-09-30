@@ -252,6 +252,8 @@ Mode -> Mood -> Scene -> Layer Mix
 
 The app cannot rely forever on the same Pad/Drone/Rain mix. Users need variety without the product becoming a playlist app.
 
+R0.5 should make scenes capable of changing the audible character, not just slider values. Scenes may require custom rain density curves, alternate Pad chord voicings, and sparse event patterns for gongs, Tibetan singing bowls, wind chimes, and crystal plucks or hits.
+
 ### Conceptual Model
 
 ```text
@@ -260,6 +262,34 @@ Mood = how the user arrives
 Scene = the specific ambient room
 Layer = sound material
 ```
+
+### Architecture Decision
+
+Use the current audio builder pattern temporarily, with constraints.
+
+Do not perform a broad audio-engine builder refactor before the first Scene Architecture implementation. Scenes should be introduced as serializable scene definitions that resolve into:
+
+- a continuous layer mix;
+- optional layer parameters, such as rain density curve and Pad voicing;
+- optional sparse event pattern settings;
+- visual metadata;
+- prompt copy.
+
+Layer builders may continue receiving the engine for R0.5 if scene-specific behavior is routed through narrow, documented inputs. Do not let scene labels, UI copy, product mood names, or prompt text leak into low-level audio builders.
+
+Revisit a narrow builder contract after R0.5 proves which scene parameters actually need audio-engine support.
+
+### Audio Scene Capabilities
+
+R0.5 should support or explicitly prepare for:
+
+- custom rain density curves per scene;
+- alternate Pad chord voicings per scene;
+- event patterns for Resonance-style one-shots;
+- gongs, Tibetan singing bowls, wind chimes, and crystal plucks/hits as sparse symbolic accents;
+- a possible endless looping rain sample for realism.
+
+The looping rain sample is an approved investigation path, not an automatic dependency or asset commitment. If used, it must preserve smooth looping, pause/resume safety, volume control, memory limits, offline/local-first behavior, and slider zero as true silence.
 
 ### Example
 
@@ -338,6 +368,9 @@ Layers:
 - Default scene is auto-selected if user skips scene selection.
 - Scene is saved in session history.
 - Older sessions without scene data still work.
+- Scene data can express mix, rain curve, Pad voicing, and event-pattern intent without storing Web Audio node objects.
+- Existing builder coupling is retained only with documented constraints.
+- Any sample-backed rain path is optional, locally owned, loop-safe, and can be disabled or deferred without breaking scenes.
 - No AI yet.
 - No backend.
 - Build passes.

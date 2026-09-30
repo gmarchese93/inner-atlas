@@ -83,7 +83,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #060608;
   }
 }
 
@@ -147,6 +148,21 @@
 .sigil-pulse     { animation: sigil-pulse-kf     10s ease-in-out infinite; }
 .card-appear     { animation: card-appear-kf    0.55s ease both; }
 .stroke-breathe  { animation: stroke-breathe-kf  8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-blob-1,
+  .gradient-blob-2,
+  .gradient-blob-3,
+  .glyph-breathe,
+  .glyph-breathe-slow,
+  .float-gentle,
+  .sigil-pulse,
+  .card-appear,
+  .stroke-breathe,
+  .fade-in {
+    animation: none !important;
+  }
+}
 
 .font-display { font-family: var(--font-display); }
 .font-body    { font-family: var(--font-body); }

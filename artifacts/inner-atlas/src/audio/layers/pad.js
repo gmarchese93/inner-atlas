@@ -1,7 +1,58 @@
 import { makeFinalGain } from '../gain';
 import { lfo } from '../effects/stereoMotion';
 
-export function buildPad(engine) {
+const PAD_VOICINGS = {
+  warm_open: [
+    { freq: 110, type: 'sine', detune: -4, vol: 0.30, side: 'L' },
+    { freq: 110, type: 'sine', detune: 6, vol: 0.24, side: 'R' },
+    { freq: 165, type: 'triangle', detune: 3, vol: 0.18, side: 'L' },
+    { freq: 165, type: 'triangle', detune: -5, vol: 0.15, side: 'R' },
+    { freq: 220, type: 'sine', detune: -7, vol: 0.12, side: 'L' },
+    { freq: 277, type: 'triangle', detune: 4, vol: 0.08, side: 'R' },
+  ],
+  warm_low: [
+    { freq: 98, type: 'sine', detune: -5, vol: 0.30, side: 'L' },
+    { freq: 98, type: 'sine', detune: 5, vol: 0.24, side: 'R' },
+    { freq: 147, type: 'triangle', detune: 3, vol: 0.18, side: 'L' },
+    { freq: 147, type: 'triangle', detune: -4, vol: 0.15, side: 'R' },
+    { freq: 196, type: 'sine', detune: -6, vol: 0.12, side: 'L' },
+    { freq: 247, type: 'triangle', detune: 4, vol: 0.08, side: 'R' },
+  ],
+  grounded_low: [
+    { freq: 82, type: 'sine', detune: -4, vol: 0.31, side: 'L' },
+    { freq: 82, type: 'sine', detune: 5, vol: 0.25, side: 'R' },
+    { freq: 123, type: 'triangle', detune: 2, vol: 0.19, side: 'L' },
+    { freq: 123, type: 'triangle', detune: -4, vol: 0.15, side: 'R' },
+    { freq: 165, type: 'sine', detune: -6, vol: 0.12, side: 'L' },
+    { freq: 220, type: 'triangle', detune: 3, vol: 0.07, side: 'R' },
+  ],
+  clear_open: [
+    { freq: 110, type: 'sine', detune: -3, vol: 0.27, side: 'L' },
+    { freq: 110, type: 'sine', detune: 4, vol: 0.22, side: 'R' },
+    { freq: 165, type: 'triangle', detune: 2, vol: 0.17, side: 'L' },
+    { freq: 165, type: 'triangle', detune: -3, vol: 0.14, side: 'R' },
+    { freq: 247, type: 'sine', detune: -4, vol: 0.11, side: 'L' },
+    { freq: 330, type: 'triangle', detune: 3, vol: 0.07, side: 'R' },
+  ],
+};
+
+export function getPadVoicing(name = 'warm_open') {
+  return PAD_VOICINGS[name] || PAD_VOICINGS.warm_open;
+}
+
+export function applyPadVoicing(engine, name) {
+  const voicing = getPadVoicing(name);
+  engine._padVoices?.forEach(({ osc, gain }, index) => {
+    const voice = voicing[index];
+    if (!voice) return;
+    osc.type = voice.type;
+    osc.frequency.value = voice.freq;
+    osc.detune.value = voice.detune;
+    gain.gain.value = voice.vol;
+  });
+}
+
+export function buildPad(engine, voicingName = 'warm_open') {
   const ctx = engine.ctx;
   const finalGain = makeFinalGain(engine, 'pad');
 
@@ -25,14 +76,8 @@ export function buildPad(engine) {
   engine._trackLFO(lfo(ctx, 0.022, 0.055, breathGain.gain));
   breathGain.connect(lp);
 
-  const voiceDefs = [
-    { freq: 110, type: 'sine', detune: -4, vol: 0.30, side: 'L' },
-    { freq: 110, type: 'sine', detune: 6, vol: 0.24, side: 'R' },
-    { freq: 165, type: 'triangle', detune: 3, vol: 0.18, side: 'L' },
-    { freq: 165, type: 'triangle', detune: -5, vol: 0.15, side: 'R' },
-    { freq: 220, type: 'sine', detune: -7, vol: 0.12, side: 'L' },
-    { freq: 277, type: 'triangle', detune: 4, vol: 0.08, side: 'R' },
-  ];
+  const voiceDefs = getPadVoicing(voicingName);
+  engine._padVoices = [];
   voiceDefs.forEach(({ freq, type, detune, vol, side }) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -51,6 +96,8 @@ export function buildPad(engine) {
     lp.connect(panL);
     lp.connect(panR);
     osc.start();
+    engine._trackSrc(osc);
+    engine._padVoices.push({ osc, gain });
   });
 
   // Reconnect lp -> both panners cleanly. The loop above may create duplicates; that's OK in Web Audio.

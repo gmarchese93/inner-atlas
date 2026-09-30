@@ -1,37 +1,30 @@
-import { LAYERS, LAYER_LABELS, MOOD_PRESETS, MOODS } from '../lib/constants';
+import { RotateCcw } from 'lucide-react';
+import { LAYERS, LAYER_LABELS } from '../lib/constants';
 
-export default function AudioMixer({ mix, onChange, disabled }) {
-  function applyPreset(moodId) {
-    onChange({ ...MOOD_PRESETS[moodId] });
-  }
-
+export default function AudioMixer({ mix, onChange, disabled, sceneLabel, sceneMix }) {
   function setLayer(layer, value) {
     onChange({ ...mix, [layer]: value });
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Mood presets */}
-      <div>
-        <p className="text-xs text-white/30 tracking-widest uppercase mb-2">Mood Presets</p>
-        <div className="flex flex-wrap gap-2">
-          {MOODS.map(m => (
-            <button
-              key={m.id}
-              onClick={() => applyPreset(m.id)}
-              disabled={disabled}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 bg-white/5 text-white/60 text-xs hover:bg-white/15 hover:text-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <span>{m.emoji}</span>
-              <span>{m.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Layer sliders */}
       <div className="flex flex-col gap-3">
-        <p className="text-xs text-white/30 tracking-widest uppercase">Mix</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-white/30 tracking-widest uppercase">Mix</p>
+          {sceneMix && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...sceneMix })}
+              disabled={disabled}
+              aria-label={`Reset mix to ${sceneLabel}`}
+              className="flex items-center gap-1.5 text-[11px] text-white/24 hover:text-white/50 transition-colors disabled:opacity-30"
+            >
+              <RotateCcw size={11} />
+              Reset
+            </button>
+          )}
+        </div>
         {LAYERS.map(layer => (
           <div key={layer} className="flex items-center gap-3">
             <span className="w-16 text-xs text-white/50 shrink-0">{LAYER_LABELS[layer]}</span>

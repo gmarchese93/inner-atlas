@@ -20,6 +20,9 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "react-router", "react-router-dom"],
   },
   test: {
+    pool: "threads",
+    maxWorkers: 1,
+    testTimeout: 15_000,
     clearMocks: true,
     restoreMocks: true,
     setupFiles: ["./tests/setup.ts"],
@@ -37,6 +40,7 @@ export default defineConfig({
       include: [
         "artifacts/inner-atlas/src/audio/**/*.js",
         "artifacts/inner-atlas/src/lib/activeSession.js",
+        "artifacts/inner-atlas/src/lib/scenes.js",
         "artifacts/inner-atlas/src/lib/sessionStorage.js",
       ],
       exclude: ["**/*.test.{js,jsx,ts,tsx}"],

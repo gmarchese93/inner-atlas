@@ -12,9 +12,23 @@ import {
 import { buildAir } from './layers/air';
 import { buildAnalog, scheduleCrackle } from './layers/analog';
 import { buildDrone } from './layers/drone';
-import { buildPad } from './layers/pad';
+import { applyPadVoicing, buildPad } from './layers/pad';
 import { buildRain, scheduleDroplets, setRainSublayers } from './layers/rain';
 import { buildResonance, triggerResonance } from './layers/resonance';
+
+const DEFAULT_SCENE_AUDIO = {
+  rainCurve: 'balanced',
+  padVoicing: 'warm_open',
+  eventPattern: 'bowl_start',
+};
+
+function resolveSceneAudio(audio) {
+  return {
+    rainCurve: audio?.rainCurve || DEFAULT_SCENE_AUDIO.rainCurve,
+    padVoicing: audio?.padVoicing || DEFAULT_SCENE_AUDIO.padVoicing,
+    eventPattern: audio?.eventPattern || DEFAULT_SCENE_AUDIO.eventPattern,
+  };
+}
 
 class AudioEngine {
   constructor() {
@@ -27,6 +41,8 @@ class AudioEngine {
     this._rainSubs = null;
     this._dropletBuf = null;
     this._analogCrackleBuf = null;
+    this._padVoices = [];
+    this._sceneAudio = resolveSceneAudio();
     this._timers = { drop: null, crack: null };
     this._lfoNodes = [];
     this._srcNodes = [];
@@ -48,7 +64,7 @@ class AudioEngine {
 
     buildDarkReverb(this);
     buildDrone(this);
-    buildPad(this);
+    buildPad(this, this._sceneAudio.padVoicing);
     buildRain(this);
     buildAnalog(this);
     this.finalGains.tape = this.finalGains.analog;
@@ -67,7 +83,12 @@ class AudioEngine {
   }
 
   _setRainSublayers(value) {
-    return setRainSublayers(this, value);
+    return setRainSublayers(this, value, this._sceneAudio.rainCurve);
+  }
+
+  _configureSceneAudio(sceneAudio) {
+    this._sceneAudio = resolveSceneAudio(sceneAudio);
+    applyPadVoicing(this, this._sceneAudio.padVoicing);
   }
 
   _scheduleDroplets(intensity) {
@@ -104,18 +125,19 @@ class AudioEngine {
     await wait(duration * 1000 + 120);
   }
 
-  async play(mix) {
+  async play(mix, sceneAudio) {
     if (this.state === STATE.PLAYING) return true;
     return this._runTransition(async () => {
       this.state = STATE.STARTING;
       try {
+        this._configureSceneAudio(sceneAudio);
         await this._ensureContext();
         if (this.ctx.state === 'suspended') await this.ctx.resume();
         if (Object.keys(this.finalGains).length === 0) this._buildGraph();
         if (mix) this._applyMixImmediate(mix);
 
         await this._fadeMasterTo(MASTER_TARGET, FADE_IN);
-        triggerResonance(this);
+        triggerResonance(this, this._sceneAudio.eventPattern);
         this.state = STATE.PLAYING;
 
         const rainV = this._userValues.rain || 0;
@@ -173,6 +195,8 @@ class AudioEngine {
     this._srcNodes = [];
     this._dropletBuf = null;
     this._analogCrackleBuf = null;
+    this._padVoices = [];
+    this._sceneAudio = resolveSceneAudio();
     if (this.ctx && this.ctx.state !== 'closed') this.ctx.close().catch(() => {});
     this.ctx = null;
     this.masterGain = null;
@@ -194,7 +218,8 @@ class AudioEngine {
     if (layer === 'rain') this._setRainSublayers(curve(value));
   }
 
-  applyMix(mix) {
+  applyMix(mix, sceneAudio) {
+    this._configureSceneAudio(sceneAudio);
     Object.entries(mix).forEach(([layer, value]) => this.setVolume(layer, value));
   }
 
@@ -209,8 +234,8 @@ class AudioEngine {
     });
   }
 
-  triggerResonance() {
-    return triggerResonance(this);
+  triggerResonance(eventPattern = this._sceneAudio.eventPattern) {
+    return triggerResonance(this, eventPattern);
   }
 
   get isPlaying() {

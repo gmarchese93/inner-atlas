@@ -3,6 +3,13 @@ import { makeFinalGain, REVERB_SEND } from '../gain';
 import { lfo, loopSrc } from '../effects/stereoMotion';
 import { mkBrown, mkBurst, mkDarkNoise, mkPink } from './noise';
 
+const RAIN_CURVES = {
+  balanced:   { bed: 1,    mid: 1,    rumble: 1,    droplets: 1 },
+  low_sparse: { bed: 0.65, mid: 0.45, rumble: 0.15, droplets: 0.75 },
+  sheltered:  { bed: 0.90, mid: 0.65, rumble: 0.20, droplets: 1.15 },
+  distant:    { bed: 0.55, mid: 0.35, rumble: 0.65, droplets: 0.30 },
+};
+
 export function buildRain(engine) {
   const ctx = engine.ctx;
   const finalGain = makeFinalGain(engine, 'rain');
@@ -89,25 +96,37 @@ export function buildRain(engine) {
   engine._dropletBuf = mkBurst(ctx, 60);
 }
 
-export function setRainSublayers(engine, value) {
+export function getRainSublayerLevels(rawValue, curveName = 'balanced') {
+  const value = Math.max(0, Math.min(1, rawValue));
+  if (value === 0) return { bed: 0, mid: 0, rumble: 0, droplets: 0 };
+
+  const selected = RAIN_CURVES[curveName] || RAIN_CURVES.balanced;
+  const bed = value < 0.12 ? value * 0.5 : Math.min(0.72, 0.06 + (value - 0.12));
+  const mid = value < 0.28 ? 0 : Math.min(0.65, (value - 0.28) * 1.3);
+  const rumble = value < 0.55 ? 0 : Math.min(0.50, (value - 0.55) * 1.2);
+  const droplets = value < 0.04 ? 0 : value < 0.35 ? value * 2.2 : Math.max(0, 0.77 - value * 0.70);
+
+  return {
+    bed: bed * selected.bed,
+    mid: mid * selected.mid,
+    rumble: rumble * selected.rumble,
+    droplets: droplets * selected.droplets,
+  };
+}
+
+export function setRainSublayers(engine, value, curveName = 'balanced') {
   if (!engine._rainSubs || !engine.ctx) return;
   const now = engine.ctx.currentTime;
   const subs = engine._rainSubs;
   const tc = 0.35;
+  const levels = getRainSublayerLevels(value, curveName);
 
-  // Density not loudness: sparse below 0.3, fuller above 0.7.
-  const bedGain = value < 0.12 ? value * 0.5 : Math.min(0.72, 0.06 + (value - 0.12) * 1.0);
-  const midGain = value < 0.28 ? 0 : Math.min(0.65, (value - 0.28) * 1.3);
-  const rumbleGain = value < 0.55 ? 0 : Math.min(0.50, (value - 0.55) * 1.2);
-  // Droplets peak at ~0.35 intensity, fade as bed takes over.
-  const dropletDensity = value < 0.04 ? 0 : value < 0.35 ? value * 2.2 : Math.max(0, 0.77 - value * 0.70);
+  subs.bed.gain.setTargetAtTime(levels.bed, now, tc);
+  subs.mid.gain.setTargetAtTime(levels.mid, now, tc);
+  subs.rumble.gain.setTargetAtTime(levels.rumble, now, tc);
+  subs.droplet.gain.setTargetAtTime(levels.droplets > 0 ? 1 : 0, now, tc);
 
-  subs.bed.gain.setTargetAtTime(bedGain, now, tc);
-  subs.mid.gain.setTargetAtTime(midGain, now, tc);
-  subs.rumble.gain.setTargetAtTime(rumbleGain, now, tc);
-  subs.droplet.gain.setTargetAtTime(1.0, now, tc);
-
-  scheduleDroplets(engine, dropletDensity * Math.sqrt(value)); // sqrt: keep droplets audible but gentle
+  scheduleDroplets(engine, levels.droplets * Math.sqrt(value));
 }
 
 export function scheduleDroplets(engine, intensity) {

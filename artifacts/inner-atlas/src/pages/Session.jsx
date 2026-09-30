@@ -6,10 +6,11 @@ import MoodGlyph from '../components/MoodGlyph';
 import AudioMixer from '../components/AudioMixer';
 import audioEngine from '../lib/audioEngine';
 import { normalizeMix } from '../lib/audioMix';
+import { getScenesForMood, resolveScene } from '../lib/scenes';
 import { saveSession } from '../lib/sessionStorage';
 import { saveActiveDraft, loadActiveDraft, clearActiveDraft } from '../lib/activeSession';
 import {
-  MODES, MOODS, MOOD_PRESETS, DEFAULT_MIX,
+  MODES, MOODS,
   INTENTION_NUDGES, INTENTION_MICROCOPY,
 } from '../lib/constants';
 
@@ -83,18 +84,22 @@ function isTransitionState(state) {
 
 export default function Session() {
   const navigate = useNavigate();
-  const params   = new URLSearchParams(window.location.search);
-  const modeId   = params.get('mode') || 'deep-focus';
-  const moodId   = params.get('mood') || 'calm';
-  const mode     = MODES.find(m => m.id === modeId) || MODES[0];
-  const mood     = MOODS.find(m => m.id === moodId) || MOODS[0];
+  const params          = new URLSearchParams(window.location.search);
+  const modeId          = params.get('mode') || 'deep-focus';
+  const requestedMoodId = params.get('mood') || 'calm';
+  const mode            = MODES.find(m => m.id === modeId) || MODES[0];
+  const mood            = MOODS.find(m => m.id === requestedMoodId) || MOODS[0];
+  const moodId          = mood.id;
+  const moodScenes      = getScenesForMood(moodId);
+  const initialScene    = resolveScene(params.get('scene'), moodId);
 
   const [sessionState,   setSessionState]   = useState(SESSION_STATE.IDLE);
   const [accumulated,    setAccumulated]    = useState(0);
   const [startedAt,      setStartedAt]      = useState(null);
   const [displaySecs,    setDisplaySecs]    = useState(0);
   const [journal,        setJournal]        = useState('');
-  const [mix,            setMix]            = useState(() => normalizeMix(null, MOOD_PRESETS[moodId] || DEFAULT_MIX));
+  const [scene,          setScene]          = useState(initialScene);
+  const [mix,            setMix]            = useState(() => normalizeMix(null, initialScene.mix));
   const [intention,      setIntention]      = useState(null);
   const [mixerOpen,      setMixerOpen]      = useState(false);
   const [roomMode,       setRoomMode]       = useState(false);
@@ -111,9 +116,11 @@ export default function Session() {
   useEffect(() => {
     const draft = loadActiveDraft();
     if (draft && draft.mode === modeId && draft.mood === moodId) {
+      const draftScene = draft.sceneId ? resolveScene(draft.sceneId, moodId) : initialScene;
+      setScene(draftScene);
       if (draft.journalText) setJournal(draft.journalText);
       if (draft.intention)   setIntention(draft.intention);
-      if (draft.audioMix)    setMix(normalizeMix(draft.audioMix, MOOD_PRESETS[moodId] || DEFAULT_MIX));
+      setMix(normalizeMix(draft.audioMix, draftScene.mix));
       if (draft.createdAt)   setCreatedAt(draft.createdAt);
       const saved = draft.accumulatedSeconds || 0;
       setAccumulated(saved); setDisplaySecs(saved);
@@ -136,14 +143,14 @@ export default function Session() {
 
   // ── Autosave draft ─────────────────────────────────────────────────────
   const buildDraft = useCallback(() => ({
-    mode: modeId, mood: moodId, createdAt,
+    mode: modeId, mood: moodId, sceneId: scene.id, createdAt,
     journalText:        journal,
     intention,
     audioMix:           mix,
     accumulatedSeconds: calcElapsed(accumulated, startedAt, TIMER_RUNNING_STATES.has(sessionState)),
     startedAt:          TIMER_RUNNING_STATES.has(sessionState) ? startedAt : null,
     isTimerRunning:     TIMER_RUNNING_STATES.has(sessionState),
-  }), [modeId, moodId, createdAt, journal, intention, mix, accumulated, startedAt, sessionState]);
+  }), [modeId, moodId, scene.id, createdAt, journal, intention, mix, accumulated, startedAt, sessionState]);
 
   const guardSaveDraft = useCallback((draft) => {
     if (!isDismissedRef.current) saveActiveDraft(draft);
@@ -167,9 +174,15 @@ export default function Session() {
   // Sync mix + nudge
   useEffect(() => {
     if (sessionState === SESSION_STATE.PLAYING) {
-      audioEngine.applyMix(applyNudge(mix, intention));
+      audioEngine.applyMix(applyNudge(mix, intention), scene.audio);
     }
-  }, [mix, intention, sessionState]);
+  }, [mix, intention, scene.audio, sessionState]);
+
+  function handleSceneChange(nextScene) {
+    if (sessionState !== SESSION_STATE.IDLE) return;
+    setScene(nextScene);
+    setMix(normalizeMix(null, nextScene.mix));
+  }
 
   function beginTransition() {
     if (transitionLockRef.current || isTransitionState(sessionState)) return false;
@@ -191,7 +204,7 @@ export default function Session() {
       setStartedAt(Date.now());
       setCreatedAt(new Date().toISOString());
       try {
-        await audioEngine.play(applyNudge(mix, intention));
+        await audioEngine.play(applyNudge(mix, intention), scene.audio);
         setAudioError(null);
       } catch {
         setAudioError('Audio unavailable — session continues silently.');
@@ -228,7 +241,7 @@ export default function Session() {
       setSessionState(SESSION_STATE.DISPOSING);
       saveSession({
         id:              `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        mode:            modeId, mood: moodId,
+        mode:            modeId, mood: moodId, sceneId: scene.id,
         durationSeconds: finalSecs,
         journalText:     journal.trim(),
         audioMix:        { ...mix },
@@ -293,7 +306,7 @@ export default function Session() {
         style={{ opacity: roomVisible ? 1 : 0, transition: 'opacity 400ms ease' }}
         onClick={exitRoom}
       >
-        <GradientBackground modeId={modeId} />
+        <GradientBackground modeId={modeId} visual={scene.visual} />
         <div className="relative z-10 flex flex-col items-center gap-10 pointer-events-none">
           {/* Animated sigil — large and sigil-pulsing */}
           <div className="sigil-pulse">
@@ -310,8 +323,8 @@ export default function Session() {
 
           {/* Minimal context */}
           <div className="flex flex-col items-center gap-1.5">
-            <p className="text-[9px] text-white/16 tracking-[0.38em] uppercase font-body">
-              {mode.label} · {mood.label}
+            <p className="max-w-[80vw] text-center text-[9px] text-white/16 tracking-[0.38em] uppercase leading-relaxed font-body">
+              {mode.label} · {mood.label} · {scene.label}
             </p>
             {intention && INTENTION_MICROCOPY[intention] && (
               <p className="text-xs text-white/10 italic font-display">
@@ -329,7 +342,7 @@ export default function Session() {
   // ── Main Session ───────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col text-white relative">
-      <GradientBackground modeId={modeId} />
+      <GradientBackground modeId={modeId} visual={scene.visual} />
 
       {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between px-5 pt-5 pb-1">
@@ -339,17 +352,16 @@ export default function Session() {
         >
           ← Exit
         </button>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-white/28 font-body">{mode.label}</span>
-          <span className="text-white/14">·</span>
-          <span className="text-[11px] text-white/28 font-body">{mood.label}</span>
+        <div className="min-w-0 flex-1 px-3 text-center font-body">
+          <p className="truncate text-[10px] text-white/24">{mode.label} · {mood.label}</p>
+          <p className="truncate text-[11px] text-white/38">{scene.label}</p>
         </div>
         <div className="w-10" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 flex flex-col flex-1 px-5 pb-10 pt-4 max-w-xl mx-auto w-full
-                      md:justify-center md:py-14 gap-5">
+                      md:justify-center md:py-8 gap-5">
 
         {audioError && (
           <p className="text-center text-xs text-amber-400/50 fade-in font-body">{audioError}</p>
@@ -371,6 +383,34 @@ export default function Session() {
             </div>
           </div>
         )}
+
+        {/* Scene */}
+        <fieldset className="flex flex-col gap-2 card-appear" style={{ animationDelay: '40ms' }}>
+          <legend className="sr-only">Choose a scene</legend>
+          <div className="grid grid-cols-3 gap-1.5" aria-label="Scene">
+            {moodScenes.map(option => {
+              const selected = scene.id === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => handleSceneChange(option)}
+                  disabled={isStarted}
+                  aria-pressed={selected}
+                  className="min-h-10 px-2 py-2 rounded-lg text-[11px] leading-tight font-body transition-colors duration-300 disabled:cursor-default"
+                  style={{
+                    border: `1px solid ${selected ? mode.accentColor + '55' : 'rgba(255,255,255,0.07)'}`,
+                    background: selected ? mode.accentColor + '12' : 'rgba(255,255,255,0.018)',
+                    color: selected ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.30)',
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="min-h-4 text-[11px] text-white/20 font-body">{scene.description}</p>
+        </fieldset>
 
         {/* Timer */}
         <div className="flex flex-col items-center gap-1 py-3 card-appear">
@@ -458,10 +498,12 @@ export default function Session() {
           {mixerOpen && (
             <div className="px-5 pb-5 border-t border-white/[0.04]">
               <div className="pt-4">
-                <AudioMixer mix={mix} onChange={(newMix) => {
-                  setMix(newMix);
-                  if (isActive) audioEngine.applyMix(applyNudge(newMix, intention));
-                }} />
+                <AudioMixer
+                  mix={mix}
+                  sceneLabel={scene.label}
+                  sceneMix={scene.mix}
+                  onChange={setMix}
+                />
               </div>
             </div>
           )}
@@ -472,7 +514,7 @@ export default function Session() {
           <textarea
             value={journal}
             onChange={e => setJournal(e.target.value)}
-            placeholder={JOURNAL_PLACEHOLDERS[modeId] || 'Write freely.'}
+            placeholder={scene.prompt || JOURNAL_PLACEHOLDERS[modeId] || 'Write freely.'}
             rows={5}
             className="w-full resize-none rounded-xl px-4 py-4 text-sm leading-relaxed focus:outline-none transition-all duration-300 font-body"
             style={{

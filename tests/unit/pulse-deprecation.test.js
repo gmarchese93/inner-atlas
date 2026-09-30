@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { LAYER_CAPS, RAMP_TC, REVERB_SEND } from "../../artifacts/inner-atlas/src/audio/gain.js";
 import {
-  DEFAULT_MIX,
   INTENTION_NUDGES,
   LAYERS,
   LAYER_LABELS,
-  MOOD_PRESETS,
 } from "../../artifacts/inner-atlas/src/lib/constants.js";
+import { SCENES } from "../../artifacts/inner-atlas/src/lib/scenes.js";
 
 describe("Pulse deprecation", () => {
   it("removes pulse from visible layer constants", () => {
@@ -14,10 +13,9 @@ describe("Pulse deprecation", () => {
     expect(LAYER_LABELS).not.toHaveProperty("pulse");
   });
 
-  it("removes pulse from presets and defaults", () => {
-    expect(DEFAULT_MIX).not.toHaveProperty("pulse");
-    Object.values(MOOD_PRESETS).forEach(preset => {
-      expect(preset).not.toHaveProperty("pulse");
+  it("removes pulse from scene mixes", () => {
+    SCENES.forEach(scene => {
+      expect(scene.mix).not.toHaveProperty("pulse");
     });
   });
 
