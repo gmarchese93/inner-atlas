@@ -59,14 +59,3 @@ export const LAYER_LABELS = {
   analog: 'Analog',
   air:    'Air',
 };
-
-// Presets: one tonal (Drone or Pad), one environmental (Rain or Air), one color layer low
-export const MOOD_PRESETS = {
-  calm:       { drone: 0.50, pad: 0.60, rain: 0.15, analog: 0.05, air: 0.14 },
-  overloaded: { drone: 0.18, pad: 0.32, rain: 0.52, analog: 0.12, air: 0.08 },
-  anxious:    { drone: 0.28, pad: 0.45, rain: 0.28, analog: 0.06, air: 0.10 },
-  sad:        { drone: 0.58, pad: 0.62, rain: 0.22, analog: 0.08, air: 0.07 },
-  clear:      { drone: 0.22, pad: 0.42, rain: 0.10, analog: 0.03, air: 0.18 },
-};
-
-export const DEFAULT_MIX = { drone: 0.42, pad: 0.52, rain: 0.15, analog: 0.05, air: 0.12 };

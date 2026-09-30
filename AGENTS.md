@@ -23,6 +23,7 @@ Relevant local tools/skills may include:
 
 - SkillSpector
 - codebase-memory-mcp
+- real-engineering
 - senior-engineering-verification
 - Ponytail / ponytail-review / ponytail-audit
 - web-design-guidelines
@@ -164,6 +165,14 @@ For non-trivial work, `senior-engineering-verification` should add:
 - merge readiness statement
 
 External GLM and Claude review surfaces are human-mediated unless a callable tool is explicitly available. Treat their output as findings to classify, not automatic truth.
+
+## Real Engineering Routing
+
+`real-engineering` is an optional workflow control plane for substantial engineering work. Inner Atlas project instructions, the definitive engineering pipeline, Ponytail, and `senior-engineering-verification` remain authoritative when their rules overlap.
+
+Use `.agents/skills/real-engineering/references/ALIGN.md` when a requested integration is not clear enough to implement in granular detail. Inspect repository facts first, then ask one material decision at a time with a recommendation and trade-off. Do not use Align to delay an already approved, decision-complete implementation.
+
+For clear bounded work, route directly through the smallest applicable Real Engineering mode, usually Implement followed by Review. Preserve user changes, keep evidence separate from inference, and do not commit, push, merge, deploy, or perform other remote or irreversible actions without explicit approval.
 
 ## Inner Atlas Definitive Engineering Pipeline
 

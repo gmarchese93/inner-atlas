@@ -78,4 +78,37 @@ describe("triggerResonance", () => {
     expect(triggerResonance({ ctx, state: STATE.PLAYING, masterGain: {} })).toBe(true);
     expect(ctx.createGain).toHaveBeenCalledTimes(4);
   });
+
+  it("supports sparse named start accents and an explicit silent pattern", () => {
+    const silentCtx = makeMockCtx();
+    expect(triggerResonance({
+      ctx: silentCtx,
+      state: STATE.PLAYING,
+      masterGain: {},
+    }, "none")).toBe(false);
+    expect(silentCtx.createOscillator).not.toHaveBeenCalled();
+
+    const gongCtx = makeMockCtx();
+    expect(triggerResonance({
+      ctx: gongCtx,
+      state: STATE.PLAYING,
+      masterGain: {},
+    }, "gong_start")).toBe(true);
+    expect(gongCtx._nodes.oscillators).toHaveLength(4);
+    expect(gongCtx._nodes.oscillators.map(osc => osc.frequency.value)).toEqual([110, 151, 242, 367]);
+  });
+
+  it("disconnects one-shot nodes after the selected accent ends", () => {
+    const ctx = makeMockCtx();
+    expect(triggerResonance({
+      ctx,
+      state: STATE.PLAYING,
+      masterGain: {},
+    }, "crystal_start")).toBe(true);
+
+    ctx._nodes.oscillators.forEach(osc => osc.onended());
+
+    ctx._nodes.oscillators.forEach(osc => expect(osc.disconnect).toHaveBeenCalled());
+    expect(ctx._nodes.gains[0].disconnect).toHaveBeenCalled();
+  });
 });

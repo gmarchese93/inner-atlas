@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test("session route query changes reset session-local state", async ({ page }) => {
   await page.goto("/session?mode=deep-focus&mood=calm", {
-    waitUntil: "domcontentloaded",
+    waitUntil: "networkidle",
   });
 
   const focusJournal = page.getByPlaceholder(
-    "What needs your full attention right now?",
+    "Let the room quiet around one thought.",
   );
   await expect(focusJournal).toBeVisible();
   await focusJournal.fill("This should not bleed into the next route.");
@@ -21,7 +21,7 @@ test("session route query changes reset session-local state", async ({ page }) =
   });
 
   const reflectionJournal = page.getByPlaceholder(
-    "What image, thought, or feeling is still with you?",
+    "What remains when you stop asking it to leave?",
   );
   await expect(reflectionJournal).toBeVisible();
   await expect(reflectionJournal).toHaveValue("");

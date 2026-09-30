@@ -81,6 +81,48 @@ describe("AudioEngine lifecycle", () => {
     expect(engine.finalGains.tape).toBe(engine.finalGains.analog);
   });
 
+  it("routes scene audio parameters through the existing graph", () => {
+    const engine = new AudioEngine();
+    engine.ctx = makeMockCtx();
+    engine._buildGraph();
+
+    engine.applyMix(
+      { rain: 0 },
+      { rainCurve: "sheltered", padVoicing: "grounded_low", eventPattern: "none" },
+    );
+
+    expect(engine._sceneAudio).toEqual({
+      rainCurve: "sheltered",
+      padVoicing: "grounded_low",
+      eventPattern: "none",
+    });
+    expect(engine._padVoices[0].osc.frequency.value).toBe(82);
+    expect(engine._rainSubs.bed.gain.setTargetAtTime).toHaveBeenCalledWith(0, 0, 0.35);
+  });
+
+  it("starts through the public play seam with scene audio parameters", async () => {
+    const engine = new AudioEngine();
+    engine.ctx = makeMockCtx();
+    engine.masterGain = makeNode({ gain: makeAudioParam(0) });
+    engine.finalGains.drone = makeNode({ gain: makeAudioParam(0) });
+    engine._fadeMasterTo = vi.fn(() => Promise.resolve());
+    engine._setRainSublayers = vi.fn();
+
+    await expect(engine.play(
+      { drone: 0.25, rain: 0.40 },
+      { rainCurve: "distant", padVoicing: "clear_open", eventPattern: "none" },
+    )).resolves.toBe(true);
+
+    expect(engine.isPlaying).toBe(true);
+    expect(engine._sceneAudio).toEqual({
+      rainCurve: "distant",
+      padVoicing: "clear_open",
+      eventPattern: "none",
+    });
+    expect(engine._userValues).toMatchObject({ drone: 0.25, rain: 0.40 });
+    expect(engine._setRainSublayers).toHaveBeenCalled();
+  });
+
   it("clears timer registry handles and nulls transient buffers during dispose", () => {
     vi.useFakeTimers();
     const engine = new AudioEngine();

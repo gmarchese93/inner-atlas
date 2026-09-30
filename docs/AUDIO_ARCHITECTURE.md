@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document captures the current Web Audio architecture after R0.4. It preserves the state-machine reasoning behind the Begin, Pause, Resume, End, and Discard race fix and records the R0.3 modular audio runtime plus the R0.4 Resonance event source.
+This document captures the current Web Audio architecture after the R0.5 Scene Architecture implementation. It preserves the state-machine reasoning behind the Begin, Pause, Resume, End, and Discard race fix and records the R0.3 modular audio runtime, R0.4 Resonance event source, and R0.5 scene parameter contract.
 
 Runtime files:
 
@@ -20,6 +20,7 @@ Runtime files:
 - `artifacts/inner-atlas/src/audio/layers/rain.js`
 - `artifacts/inner-atlas/src/audio/layers/resonance.js`
 - `artifacts/inner-atlas/src/lib/audioMix.js` - current mix normalization and legacy aliases
+- `artifacts/inner-atlas/src/lib/scenes.js` - serializable scene definitions and mood-scene resolution
 - `artifacts/inner-atlas/src/pages/Session.jsx`
 - `artifacts/inner-atlas/src/components/AudioMixer.jsx`
 - `artifacts/inner-atlas/src/lib/constants.js`
@@ -123,20 +124,22 @@ Constants:
 
 ## Public Engine Flow
 
-### `play(mix)`
+### `play(mix, sceneAudio?)`
 
 Flow:
 
 1. If already `playing`, return `true`.
 2. Enter `_runTransition`.
 3. Set engine state to `starting`.
-4. Ensure an AudioContext exists.
-5. Resume the context if suspended.
-6. Build the graph if needed.
-7. Apply the provided mix immediately.
-8. Fade master gain to `MASTER_TARGET`.
-9. Set engine state to `playing`.
-10. Restart rain sublayer scheduling if applicable.
+4. Resolve the optional rain curve, Pad voicing, and event pattern to safe defaults.
+5. Ensure an AudioContext exists.
+6. Resume the context if suspended.
+7. Build the graph if needed.
+8. Apply the provided mix immediately.
+9. Fade master gain to `MASTER_TARGET`.
+10. Trigger the selected start accent unless the pattern is `none`.
+11. Set engine state to `playing`.
+12. Restart rain sublayer scheduling if applicable.
 
 On failure, state returns to `idle` and the error is rethrown.
 
@@ -309,7 +312,7 @@ Deprecated legacy layer:
 
 Event source:
 
-- `resonance`: a synthesized one-shot bowl/tuning-fork accent. It is not a slider layer, has no `finalGains` entry, and does not use a recurring scheduler. Each trigger creates temporary oscillator/gain nodes, sends a controlled amount to master/reverb, schedules oscillator stop, and disconnects when ended.
+- `resonance`: synthesized one-shot bowl, gong, chime, or crystal-style start accents. It is not a slider layer, has no `finalGains` entry, and does not use a recurring scheduler. Each trigger creates temporary oscillator/gain nodes, sends a controlled amount to master/reverb, schedules oscillator stop, and disconnects when ended.
 
 Layer values are curved before gain application:
 ```js
@@ -317,6 +320,28 @@ Math.pow(clamp(value, 0, 1), 1.65)
 ```
 
 Each layer has a cap and smoothing time constant. A raw slider value of `0` is clamped and curved to `0`, so it must remain true silence for that layer.
+
+## R0.5 Scene Resolution
+
+The product flow is:
+
+```text
+Mode -> Mood -> Scene -> Layer Mix
+```
+
+`lib/scenes.js` owns the 15 plain-data scene definitions. The first scene for each legacy mood ID is the default. A route may provide `scene=<id>`; missing, unknown, or mood-mismatched scene IDs resolve to the mood default.
+
+Scene definitions contain product-facing labels, descriptions, prompts, visual metadata, and a continuous five-layer mix. Only this narrow serializable object enters the audio engine:
+
+```js
+{
+  rainCurve: 'balanced | low_sparse | sheltered | distant',
+  padVoicing: 'warm_open | warm_low | grounded_low | clear_open',
+  eventPattern: 'none | bowl_start | gong_start | chime_start | crystal_start',
+}
+```
+
+Layer builders do not receive scene labels, moods, modes, prompts, callbacks, timers, or Web Audio nodes from scene data. `applyMix(mix, sceneAudio?)` preserves the previous one-argument call shape while allowing the selected rain curve and Pad voicing to be applied through the existing graph. Start accents remain one-shot only; no recurring scene-event scheduler or imported rain sample exists in R0.5.
 
 ## Known Technical Debt
 
@@ -326,3 +351,4 @@ Each layer has a cap and smoothing time constant. A raw slider value of `0` is c
 - Discard now waits for full fade-out before navigation; this is correct for audio safety but may need a product decision on perceived responsiveness.
 - Browser automation can verify control flow, but audible output still needs human confirmation.
 - Manual Resonance strike UI and global mute remain deferred until human listening/product review asks for them.
+- Imported looping rain remains a deferred local-asset investigation; procedural rain is still the only R0.5 rain source.

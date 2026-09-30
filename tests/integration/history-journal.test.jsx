@@ -44,4 +44,24 @@ describe("History journal states", () => {
     expect(screen.getByRole("button", { name: /show journal/i })).toBeInTheDocument();
     expect(screen.queryByText("No journal entry.")).not.toBeInTheDocument();
   });
+
+  it("shows a known scene label and leaves old sessions unchanged", () => {
+    localStorage.setItem(
+      "inner_atlas_sessions",
+      JSON.stringify([
+        { ...baseSession, id: "new", sceneId: "soft_rain", journalText: "" },
+        { ...baseSession, id: "old", journalText: "" },
+      ]),
+    );
+
+    render(
+      <MemoryRouter>
+        <History />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Soft Rain")).toBeInTheDocument();
+    expect(screen.queryByText("Still Room")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Quiet")).toHaveLength(2);
+  });
 });

@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("selects a state and persists the active journal draft", async ({
+test("selects a scene and persists the active journal draft", async ({
   page,
 }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/", { waitUntil: "networkidle" });
   await page.addStyleTag({
     content: `
       *, *::before, *::after {
@@ -24,13 +24,22 @@ test("selects a state and persists the active journal draft", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: /quiet/i }).click();
+  await expect(page.getByRole("button", { name: /still room/i })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: /soft rain/i }).click();
   const journal = page.getByPlaceholder(
-    "What needs your full attention right now?",
+    "Notice what softens when nothing asks for an answer.",
   );
 
   await expect(journal).toBeVisible();
   await journal.fill("Protect the quiet center.");
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.reload({ waitUntil: "networkidle" });
 
+  await expect(page.getByRole("button", { name: /soft rain/i })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(journal).toHaveValue("Protect the quiet center.");
 });
